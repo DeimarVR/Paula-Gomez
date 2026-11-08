@@ -1,0 +1,59 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Variables de entorno — NUNCA se suben: contienen tokens y contraseñas
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Compilados
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Registros y temporales
+*.log
+npm-debug.log*
+yarn-error.log*
+.cache/
+.turbo/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Pruebas
+coverage/
+playwright-report/
+test-results/
+
+# Carpeta donde la app de escritorio deja copias de los archivos que genera.
+# Las versiones buenas viven en docs/; estas son duplicados de trabajo.
+Claude outputs/
+
+# Carpeta de descarte: archivos que hay que borrar a mano.
+_to_delete/
+
+# Datos reales de pacientes.
+#
+# Los volcados de carga llevan nombres, cédulas, teléfonos y notas clínicas.
+# Eso no va a un repositorio: una vez commiteado queda en el historial para
+# siempre, aunque después se borre el archivo. Viven fuera del proyecto.
+carga-pacientes.sql
+carga-citas.sql
+datos-pacientes/

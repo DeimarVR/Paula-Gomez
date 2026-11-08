@@ -1,0 +1,833 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   SISTEMA DE DISEÑO «Sereno clínico» — el único lugar donde viven los colores
+   --------------------------------------------------------------------------
+   Sale de la maqueta aprobada (docs/maqueta-clinica.html). Para vestir el
+   sitio con la identidad del cliente basta con cambiar estos valores: ningún
+   componente tiene un color escrito a mano.
+
+   Los valores van en formato "R G B" (sin comas ni `rgb()`) para que Tailwind
+   pueda aplicarles opacidad: `bg-brand-700/80`.
+
+   Los nombres `brand`, `accent` y `leaf` vienen del diseño anterior y se
+   conservan para no tocar cada componente: ahora `brand` es el azul profundo,
+   `accent` la arena (también se llama `sand`) y `leaf` un gris pizarra. El
+   código nuevo usa `brand` y `sand`.
+
+   Reglas que sostienen la paleta:
+     - Un solo color de acción: el azul. Botones y enlaces, nada más.
+     - La arena es decorativa: líneas, etiquetas, detalles. Nunca un botón.
+     - Los estados (ok, aviso, error) siempre van con icono y texto, nunca
+       solo con color.
+   La auditoría de contraste está al final del archivo.
+   ========================================================================== */
+
+:root {
+  /* --- Tipografías ---------------------------------------------------------
+     Autoalojadas vía @fontsource (se importan en `layout.tsx`). No se cargan
+     desde Google: el navegador no habla con dominios de terceros. */
+  --font-sans: 'Figtree';
+  --font-display: 'Newsreader';
+
+  /* --- Azul profundo — el color de la marca -------------------------------
+     700 es el de los botones (#1F3A5F), 600 el de enlaces y foco, 900 el
+     fondo de las secciones oscuras y la barra del panel. */
+  --brand-50: 242 246 251; /* #F2F6FB */
+  --brand-100: 230 237 246; /* #E6EDF6 — fondos de pastillas y filas activas */
+  --brand-200: 204 218 235; /* #CCDAEB — bordes suaves y ::selection */
+  --brand-300: 157 181 211; /* #9DB5D3 */
+  --brand-400: 95 132 176; /* #5F84B0 — decorativo */
+  --brand-500: 58 101 150; /* #3A6596 */
+  --brand-600: 44 82 130; /* #2C5282 — enlaces y foco */
+  --brand-700: 31 58 95; /* #1F3A5F — botón principal */
+  --brand-800: 22 43 71; /* #162B47 — hover */
+  --brand-900: 19 35 59; /* #13233B — secciones oscuras */
+
+  /* --- Arena — acento decorativo ------------------------------------------ */
+  --accent-100: 246 240 230; /* #F6F0E6 */
+  --accent-300: 226 210 184; /* #E2D2B8 */
+  --accent-400: 201 174 133; /* #C9AE85 — líneas y detalles; texto solo sobre oscuro */
+  --accent-500: 184 151 95; /* #B8975F */
+  --accent-700: 122 90 46; /* #7A5A2E — texto arena */
+
+  /* --- Pizarra — neutro con tono, para lo que antes era verde -------------- */
+  --leaf-100: 238 241 245; /* #EEF1F5 */
+  --leaf-300: 195 204 216; /* #C3CCD8 */
+  --leaf-400: 135 146 162; /* #8792A2 */
+  --leaf-600: 95 107 122; /* #5F6B7A */
+  --leaf-700: 75 85 101; /* #4B5565 */
+
+  /* --- Neutros --- */
+  --ink: 20 33 61; /* #14213D — texto principal */
+  --muted: 75 85 101; /* #4B5565 — texto secundario */
+  --subtle: 95 107 122; /* #5F6B7A — metadatos */
+  --cream: 246 247 249; /* #F6F7F9 — fondo de página */
+  --surface: 255 255 255; /* tarjetas */
+  --line: 227 231 237; /* #E3E7ED — divisores */
+  --line-strong: 135 146 162; /* #8792A2 — bordes de campos (3,2:1) */
+
+  /* --- Texto sobre el azul profundo --- */
+  --on-deep: 232 237 244; /* #E8EDF4 */
+  --on-deep-muted: 169 182 200; /* #A9B6C8 */
+
+  /* --- Estados --- */
+  --ok: 29 122 77; /* #1D7A4D */
+  --ok-bg: 231 245 238; /* #E7F5EE */
+  --warn: 138 83 0; /* #8A5300 */
+  --warn-bg: 252 242 222; /* #FCF2DE */
+  --bad: 180 35 24; /* #B42318 */
+  --bad-bg: 253 236 234; /* #FDECEA */
+
+  /* --- Tinta de papel ------------------------------------------------------
+     Para lo que se imprime (expediente, consentimientos, hojas clínicas). El
+     azul de la pantalla sale gris claro en muchas impresoras de consultorio;
+     en papel el texto va casi negro. */
+  --paper-ink: 17 17 17; /* #111111 */
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Compensa el header fijo al saltar a un ancla. */
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream font-sans text-[16px] leading-relaxed text-ink antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Newsreader en peso 500: con serifa, el 600 y el 700 se ven pesados. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display font-medium tracking-[-0.01em] text-ink;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-ink;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-600 ring-offset-2 ring-offset-surface;
+  }
+}
+
+@layer components {
+  /* Contenedor estándar: 1200 px, 24 px de margen (16 en el celular). */
+  .shell {
+    @apply mx-auto w-full max-w-[75rem] px-4 sm:px-6;
+  }
+
+  /*
+   * Etiqueta que abre cada sección: mayúsculas en arena, con una raya corta
+   * delante. Las variantes de color del diseño anterior quedan como alias:
+   * en este sistema solo hay una etiqueta.
+   */
+  .eyebrow {
+    @apply inline-flex items-center gap-2.5 text-[0.8125rem] font-semibold uppercase
+           tracking-[0.09em] text-accent-700;
+  }
+
+  .eyebrow::before {
+    content: '';
+    @apply h-px w-6 flex-none bg-accent-400;
+  }
+
+  .eyebrow-leaf,
+  .eyebrow-accent,
+  .eyebrow-tint {
+    @apply eyebrow;
+  }
+
+  /* Sobre el azul profundo: arena clara, 7,4:1. */
+  .eyebrow-deep {
+    @apply eyebrow text-accent-400;
+  }
+
+  .lead {
+    @apply text-[1.125rem] leading-[1.65] text-muted;
+  }
+
+  .link-arrow {
+    @apply inline-flex items-center gap-1.5 text-[15px] font-semibold text-brand-600 no-underline;
+  }
+
+  .link-arrow svg {
+    @apply transition-transform duration-200;
+  }
+
+  .link-arrow:hover svg {
+    @apply translate-x-[3px];
+  }
+
+  /*
+   * Botones: 48 px de alto (objetivo táctil cómodo), esquinas de 8 px, sin
+   * sombras ni saltos. Sereno quiere decir que nada brinca al pasar el ratón.
+   */
+  .btn {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg
+           border border-transparent px-[22px] text-[15px] font-semibold leading-none no-underline
+           transition-colors duration-200 active:translate-y-px
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-sm {
+    @apply min-h-10 px-3.5 text-sm;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-700 text-white hover:bg-brand-800;
+  }
+
+  /* Alias del diseño anterior: un solo color de acción. */
+  .btn-brand-vivid {
+    @apply btn-primary;
+  }
+
+  /* Secundario tintado, para la segunda acción de una tarjeta. */
+  .btn-leaf {
+    @apply btn bg-brand-100 text-brand-700 hover:bg-brand-200;
+  }
+
+  /* La arena no es un botón: esto queda como contorno con detalle arena. */
+  .btn-accent {
+    @apply btn border-accent-400 bg-surface text-ink hover:bg-accent-100;
+  }
+
+  .btn-outline {
+    @apply btn border-line-strong bg-surface text-ink hover:border-ink;
+  }
+
+  .btn-ghost {
+    @apply btn text-brand-700 hover:bg-brand-50;
+  }
+
+  /* Botón claro sobre el azul profundo. */
+  .btn-on-dark {
+    @apply btn bg-white text-ink hover:bg-brand-50;
+  }
+
+  /* Contorno claro sobre el azul profundo. */
+  .btn-on-deep {
+    @apply btn border-white/45 bg-transparent text-white hover:border-white hover:bg-white/[0.06];
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgb(var(--ink)/0.05)];
+  }
+
+  /* Tarjeta que reacciona al cursor: borde y sombra, sin saltar. */
+  .card-lift {
+    @apply card transition-[border-color,box-shadow] duration-300 hover:border-brand-200 hover:shadow-soft;
+  }
+
+  /*
+   * Insignias de estado. Siempre con texto (y casi siempre con icono): el
+   * color solo no basta para quien no distingue el verde del rojo.
+   */
+  .badge {
+    @apply inline-flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-full px-2.5
+           text-[12.5px] font-semibold;
+  }
+
+  .badge svg {
+    @apply h-3.5 w-3.5 flex-none;
+  }
+
+  .badge-ok { @apply badge bg-ok-bg text-ok; }
+  .badge-warn { @apply badge bg-warn-bg text-warn; }
+  .badge-bad { @apply badge bg-bad-bg text-bad; }
+  .badge-info { @apply badge bg-brand-100 text-brand-700; }
+  .badge-neutral { @apply badge bg-leaf-100 text-muted; }
+
+  /**
+   * Entrada del aviso de cookies. Sube desde abajo una sola vez.
+   *
+   * Bajo `prefers-reduced-motion` aparece sin desplazarse: para quien el
+   * movimiento le produce mareo o migraña, un elemento que salta a la vista
+   * no es un detalle simpático.
+   */
+  .animar-aviso {
+    animation: subir-aviso 260ms ease-out both;
+  }
+
+  @keyframes subir-aviso {
+    from { opacity: 0; transform: translateY(0.75rem); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animar-aviso { animation: none; }
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+
+  /* Campos: borde de 3:1 contra el blanco, que es el mínimo para un control. */
+  .field {
+    @apply min-h-12 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 py-2.5
+           text-[15px] text-ink transition-[border-color,box-shadow] placeholder:text-subtle/80
+           focus:border-brand-600 focus:outline-none focus:ring-[3px] focus:ring-brand-600/20;
+  }
+
+  /**
+   * Campo con error. Se aplica ADEMÁS de `.field`, no en su lugar.
+   *
+   * El color rojo del borde no puede ser lo único que marque el error: quien
+   * no distingue el rojo vería el campo igual que los demás. Por eso siempre
+   * va acompañado del mensaje de `.field-error` debajo, y del foco puesto en
+   * el campo.
+   */
+  .field-invalid {
+    @apply border-bad bg-bad-bg/40 focus:border-bad focus:ring-bad/20;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-sm text-bad;
+  }
+
+  /*
+   * Entrada animada de `<Reveal>`.
+   *
+   * El estado oculto cuelga de `html.js`, que solo existe cuando el navegador
+   * ejecuta JavaScript. Así, sin JS el contenido se muestra normalmente en vez
+   * de quedar invisible por un opacity-0 que nadie va a revertir.
+   *
+   * El estado final es `transform: none`, no `translateY(0)`: un transform,
+   * aunque sea de cero, convierte al elemento en bloque contenedor y rompería
+   * cualquier `position: fixed` que viva dentro.
+   *
+   * Desplazamientos cortos y rápidos: en un sitio clínico la entrada acompaña,
+   * no protagoniza.
+   */
+  .reveal {
+    @apply transition-[opacity,transform] duration-[450ms] ease-[cubic-bezier(0.2,0.7,0.2,1)];
+  }
+
+  .js .reveal[data-revealed='false'] {
+    opacity: 0;
+  }
+
+  .js .reveal[data-variant='up'][data-revealed='false'] {
+    transform: translateY(12px);
+  }
+
+  .js .reveal[data-variant='left'][data-revealed='false'] {
+    transform: translateX(-12px);
+  }
+
+  .js .reveal[data-variant='right'][data-revealed='false'] {
+    transform: translateX(12px);
+  }
+
+  .js .reveal[data-variant='scale'][data-revealed='false'] {
+    transform: scale(0.98);
+  }
+
+  .reveal[data-revealed='true'] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /*
+   * Entrada de página al navegar entre secciones del sitio. El último
+   * fotograma deja `transform: none` por la misma razón: `fill-mode: both`
+   * conserva el valor final, y un translateY(0) retenido dejaría el
+   * contenedor bloqueando los elementos fijos de dentro.
+   */
+  .page-enter {
+    animation: page-enter 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* Barra de avance de lectura, pegada al borde inferior de la cabecera. */
+  .scroll-progress {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left
+           bg-gradient-to-r from-brand-600 via-brand-400 to-accent-400;
+    transform: scaleX(var(--progreso, 0));
+    transition: transform 90ms linear;
+  }
+
+  /*
+   * Marcador de imagen: trama de puntos sobre un degradado frío-cálido. Se
+   * reemplaza por las fotos reales del cliente.
+   */
+  .marcador-imagen {
+    background:
+      radial-gradient(circle at 1px 1px, rgb(var(--brand-700) / 0.1) 1px, transparent 0) 0 0 / 18px 18px,
+      linear-gradient(155deg, #e9eef5 0%, #f1eee8 100%);
+  }
+
+  /* Textura sutil de fondo para las secciones oscuras. */
+  .grain {
+    position: relative;
+  }
+
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.18;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+}
+
+/* ==========================================================================
+   PANEL — piezas de la maqueta «Sereno clínico»
+   --------------------------------------------------------------------------
+   CSS plano y no utilidades sueltas: son las piezas que se repiten en todas
+   las pantallas del panel (tarjetas con cabecera, tablas, pestañas, listas) y
+   así cada pantalla se lee como estructura, no como una sopa de clases.
+   ========================================================================== */
+@layer components {
+  .page-head {
+    @apply flex flex-wrap items-end justify-between gap-4;
+  }
+  .page-head h1 {
+    @apply text-[clamp(1.7rem,2.6vw,2.1rem)] leading-[1.15];
+  }
+  .page-head p {
+    @apply mt-1.5 text-[15px] text-muted;
+  }
+  .page-actions {
+    @apply flex flex-wrap gap-2.5;
+  }
+  .crumbs {
+    @apply mb-2 flex items-center gap-1.5 text-[13.5px] text-subtle;
+  }
+  .crumbs a {
+    @apply text-subtle no-underline hover:text-brand-600 hover:underline;
+  }
+
+  /* Tarjeta de panel: cabecera con título en sans, cuerpo y pie opcional. */
+  .panel-card {
+    @apply card overflow-hidden p-0;
+  }
+  .card-head {
+    @apply flex items-center justify-between gap-3 border-b border-line px-[22px] py-[18px];
+  }
+  .card-head h2 {
+    @apply font-sans text-base font-semibold leading-snug tracking-normal;
+  }
+  .card-head p {
+    @apply mt-0.5 text-[13.5px] text-subtle;
+  }
+  .card-body {
+    @apply px-[22px] py-5;
+  }
+  .card-foot {
+    @apply border-t border-line bg-[#FAFBFC] px-[22px] py-3.5;
+  }
+
+  /* Botón de texto: la acción secundaria de una fila o una cabecera. */
+  .btn-text {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-2 text-sm font-semibold
+           text-brand-600 transition-colors hover:bg-brand-50 disabled:opacity-50;
+  }
+
+  .icon-btn {
+    @apply relative grid h-[42px] w-[42px] place-items-center rounded-lg border border-line bg-surface
+           text-muted transition-colors hover:border-line-strong hover:text-ink;
+  }
+
+  /* Iniciales en círculo. */
+  .avatar {
+    @apply inline-grid h-9 w-9 flex-none place-items-center rounded-full bg-brand-100 text-[13px]
+           font-semibold text-brand-700;
+  }
+
+  .icon-box {
+    @apply grid flex-none place-items-center;
+  }
+  .tone-info { @apply bg-brand-50 text-brand-700; }
+  .tone-ok { @apply bg-ok-bg text-ok; }
+  .tone-warn { @apply bg-warn-bg text-warn; }
+  .tone-bad { @apply bg-bad-bg text-bad; }
+  .tone-sand { @apply bg-accent-100 text-accent-700; }
+
+  .kpi {
+    @apply card grid gap-2.5 p-5;
+  }
+  .kpi-top {
+    @apply flex items-center justify-between text-sm font-medium text-muted;
+  }
+  .kpi-value {
+    @apply font-display text-[2.3rem] font-medium leading-none;
+  }
+  .kpi-sub {
+    @apply text-[13.5px] text-subtle;
+  }
+
+  /* Tabla: cabecera en versalitas, filas con hover suave. */
+  .tabla {
+    @apply w-full border-collapse text-[14.5px];
+  }
+  .tabla th {
+    @apply border-b border-line bg-[#FAFBFC] px-4 py-3 text-left text-[12.5px] font-semibold
+           uppercase tracking-[0.04em] text-subtle;
+  }
+  .tabla td {
+    @apply border-b border-line px-4 py-3.5 align-middle;
+  }
+  .tabla tr:last-child td {
+    @apply border-b-0;
+  }
+  .tabla tbody tr {
+    @apply transition-colors hover:bg-[#FAFBFC];
+  }
+  .tabla th:first-child,
+  .tabla td:first-child {
+    @apply pl-[22px];
+  }
+  .tabla th:last-child,
+  .tabla td:last-child {
+    @apply pr-[22px] text-right;
+  }
+  .tabla .hora {
+    @apply whitespace-nowrap font-semibold tabular-nums;
+  }
+  .persona {
+    @apply flex items-center gap-3;
+  }
+  .persona b {
+    @apply block font-semibold;
+  }
+  .persona span.meta {
+    @apply block text-[13px] text-subtle;
+  }
+
+  /* Lista simple dentro de una tarjeta. */
+  .lista > li {
+    @apply flex items-center gap-3 border-b border-line px-[22px] py-3.5 last:border-b-0;
+  }
+  .lista b {
+    @apply block text-[14.5px] font-semibold;
+  }
+  .lista .meta {
+    @apply block text-[13px] text-subtle;
+  }
+
+  /* Pestañas con subrayado. */
+  .tabs {
+    @apply no-scrollbar flex gap-1 overflow-x-auto border-b border-line;
+  }
+  .tab {
+    @apply relative h-[46px] whitespace-nowrap px-3.5 text-[14.5px] font-medium text-muted hover:text-ink;
+  }
+  .tab[aria-selected='true'] {
+    @apply font-semibold text-brand-700;
+  }
+  .tab[aria-selected='true']::after {
+    content: '';
+    @apply absolute inset-x-2.5 -bottom-px h-0.5 rounded-sm bg-brand-700;
+  }
+
+  /* Pares rótulo / valor del expediente. */
+  .campos {
+    @apply m-0 grid gap-[18px];
+  }
+  .campos dt {
+    @apply text-[12.5px] font-semibold uppercase tracking-[0.04em] text-subtle;
+  }
+  .campos dd {
+    @apply mt-1.5 whitespace-pre-line text-[15px] leading-[1.55] text-ink;
+  }
+
+  .progreso {
+    @apply mt-2.5 h-2 overflow-hidden rounded-full bg-brand-100;
+  }
+  .progreso > span {
+    @apply block h-full rounded-[inherit] bg-brand-700;
+  }
+
+  /* Línea de tiempo de las notas de evolución. */
+  .linea-tiempo > li {
+    @apply relative pb-[22px] pl-7 last:pb-0;
+  }
+  .linea-tiempo > li::before {
+    content: '';
+    @apply absolute -bottom-2 left-1.5 top-2 w-px bg-line;
+  }
+  .linea-tiempo > li:last-child::before {
+    @apply hidden;
+  }
+  .linea-tiempo > li::after {
+    content: '';
+    @apply absolute left-px top-[5px] h-[11px] w-[11px] rounded-full border-2 border-brand-600 bg-surface;
+  }
+
+  /* Recuadro de ayuda: explica sin alarmar. */
+  .ayuda {
+    @apply flex gap-2.5 rounded-[10px] bg-brand-50 px-4 py-3.5 text-[13.5px] leading-normal text-brand-700;
+  }
+
+  /* Enlace de la barra lateral. */
+  .side-link {
+    @apply relative flex min-h-[42px] w-full items-center gap-3 rounded-lg px-3 text-left text-[14.5px]
+           font-medium text-muted no-underline transition-colors hover:bg-cream hover:text-ink;
+  }
+  .side-link[aria-current='page'] {
+    @apply bg-gradient-to-r from-brand-50 to-brand-50/40 font-semibold text-brand-700;
+  }
+  .side-link[aria-current='page']::before {
+    content: '';
+    @apply absolute -left-3.5 bottom-[9px] top-[9px] w-[3px] rounded-r bg-brand-700;
+  }
+  .side-label {
+    @apply px-3 pb-1.5 pt-2.5 text-[11.5px] font-semibold uppercase tracking-[0.09em] text-subtle;
+  }
+
+  /* La marca del centro: cuadro azul con un cruce, mientras no haya logo. */
+  .brand-mark {
+    @apply grid h-10 w-10 flex-none place-items-center rounded-[11px];
+    background: linear-gradient(150deg, #2b5283, rgb(var(--brand-700)) 55%, rgb(var(--brand-900)));
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 6px 14px -8px rgb(var(--ink) / 0.6);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Oculta la barra de desplazamiento sin perder el scroll. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Manchas que flotan detrás del hero. Son decorativas y `aria-hidden`; la
+   consulta de movimiento reducido del final las congela.
+   -------------------------------------------------------------------------- */
+/* Botón de WhatsApp: flota despacio y late un aro detrás. */
+@keyframes wa-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes wa-aro {
+  0% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+  75% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.08);
+  }
+}
+
+@keyframes float-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-20px, 16px) scale(1.05);
+  }
+}
+
+@keyframes float-c {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(14px, 20px) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /*
+   * Movimiento reducido no significa "sin nada": significa sin desplazamiento
+   * ni escala. El contenido sigue apareciendo al llegar a el, pero con un
+   * fundido corto, que es movimiento nulo. Antes esta regla lo dejaba todo
+   * visible de golpe y la pagina se sentia muerta para quien tiene los efectos
+   * de animacion apagados en su sistema.
+   */
+  .reveal {
+    transition-property: opacity !important;
+    transition-duration: 420ms !important;
+    transform: none !important;
+  }
+
+  .page-enter {
+    animation: page-fade 420ms ease both !important;
+  }
+}
+
+/* ==========================================================================
+   Auditoría de contraste (WCAG 2.1 AA · 4,5:1 texto normal · 3:1 texto grande)
+   --------------------------------------------------------------------------
+   ink            sobre cream        14,90:1   texto principal
+   muted          sobre cream         7,03:1   párrafos secundarios
+   subtle         sobre surface       5,43:1   metadatos
+   brand-600      sobre surface       7,97:1   enlaces
+   white          sobre brand-700    11,48:1   botón principal
+   white          sobre brand-800    14,28:1   botón principal en hover
+   brand-700      sobre brand-100     9,74:1   pastillas e insignias
+   accent-700     sobre cream         5,88:1   etiquetas de sección
+   accent-700     sobre accent-100    5,56:1   pastillas arena
+   accent-400     sobre brand-900     7,42:1   etiquetas sobre fondo oscuro
+   on-deep        sobre brand-900    13,41:1   texto del pie
+   on-deep-muted  sobre brand-900     7,67:1   párrafos del pie
+   ok             sobre ok-bg         4,74:1   estado correcto
+   warn           sobre warn-bg       5,69:1   estado de aviso
+   bad            sobre bad-bg        5,75:1   estado de error
+   line-strong    sobre surface       3,15:1   borde de campos (mínimo 3:1)
+
+   Medidos con la fórmula de luminancia relativa de WCAG 2.1.
+   ========================================================================== */
+
+/* ==========================================================================
+   Impresión de documentos (expediente, consentimientos, hojas clínicas)
+   ==========================================================================
+   El panel completo —barra lateral, botones, encabezados— no tiene por qué
+   gastar tinta. Al imprimir solo sobrevive `.hoja`, que es el documento.
+
+   Se usa `visibility` y no `display:none` a propósito: ocultar los ancestros
+   con `display` sacaría la hoja del flujo junto con ellos. Con `visibility`
+   los contenedores siguen existiendo, invisibles, y la hoja se reposiciona
+   encima. Es el truco de siempre para imprimir un fragmento de una página.
+   ========================================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .hoja,
+  .hoja * {
+    visibility: visible;
+  }
+
+  .hoja {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+
+  /* Los fondos grises de las cabeceras de tabla se pierden si el navegador
+     decide no imprimir colores de fondo; esto se lo pide explícitamente. */
+  .hoja * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Si el documento se desborda, que no parta una fila por la mitad. */
+  .hoja tr,
+  .hoja table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+/* ==========================================================================
+   Safari en iPhone y el zoom al enfocar
+   ==========================================================================
+   iOS hace zoom automático sobre cualquier campo cuya letra mida menos de
+   16 px, y al salir del campo NO deshace el zoom: la página se queda corrida,
+   se puede arrastrar de lado y parece que la maqueta está rota. No es un fallo
+   de la maqueta, es esta regla de Safari.
+
+   La solución que se suele ver por ahí —`maximum-scale=1` en el viewport—
+   impide al usuario ampliar la pantalla con los dedos, que es una función de
+   accesibilidad y no algo que se pueda quitar por comodidad. Además iOS la
+   ignora desde hace años.
+
+   Lo correcto es lo de abajo: en pantallas de teléfono, ningún campo baja de
+   16 px. Solo afecta a lo que se escribe; los rótulos y el resto del texto
+   conservan su tamaño. `@screen sm` está en el máximo, así que de tablet para
+   arriba las medidas del diseño vuelven intactas.
+   ========================================================================== */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@page {
+  size: letter portrait;
+  margin: 12mm;
+}

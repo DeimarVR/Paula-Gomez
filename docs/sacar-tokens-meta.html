@@ -1,0 +1,539 @@
+<title>Sacar las llaves de Meta</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --papel: #EEF1F2;
+    --tarjeta: #FFFFFF;
+    --tinta: #141B1D;
+    --tinta-suave: #4A585B;
+    --tinta-tenue: #77868A;
+    --linea: #D5DCDE;
+    --linea-fina: #E4E9EA;
+
+    --marca: #0E6B62;
+    --marca-suave: #E2EFED;
+
+    --ig: #A6386B;
+    --ig-suave: #F7E8EF;
+    --wa: #1F6B4A;
+    --wa-suave: #E4F0EA;
+
+    --aviso: #8A5510;
+    --aviso-fondo: #FBF0DE;
+    --aviso-linea: #E8CFA0;
+
+    --alto: #A33028;
+    --alto-fondo: #FAE9E7;
+    --alto-linea: #EDC6C1;
+
+    --sans: 'Familjen Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono: 'IBM Plex Mono', 'Consolas', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel: #0F1618;
+      --tarjeta: #172023;
+      --tinta: #E8EDEE;
+      --tinta-suave: #A9B7BA;
+      --tinta-tenue: #7C8A8D;
+      --linea: #2A3639;
+      --linea-fina: #212C2F;
+      --marca: #4FBFB0;
+      --marca-suave: #16302E;
+      --ig: #E08AB0;
+      --ig-suave: #2E1A23;
+      --wa: #6BC79B;
+      --wa-suave: #16281F;
+      --aviso: #E0B268;
+      --aviso-fondo: #2B2213;
+      --aviso-linea: #4A3A1C;
+      --alto: #E89289;
+      --alto-fondo: #2E1A18;
+      --alto-linea: #4A2723;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --papel: #0F1618;
+    --tarjeta: #172023;
+    --tinta: #E8EDEE;
+    --tinta-suave: #A9B7BA;
+    --tinta-tenue: #7C8A8D;
+    --linea: #2A3639;
+    --linea-fina: #212C2F;
+    --marca: #4FBFB0;
+    --marca-suave: #16302E;
+    --ig: #E08AB0;
+    --ig-suave: #2E1A23;
+    --wa: #6BC79B;
+    --wa-suave: #16281F;
+    --aviso: #E0B268;
+    --aviso-fondo: #2B2213;
+    --aviso-linea: #4A3A1C;
+    --alto: #E89289;
+    --alto-fondo: #2E1A18;
+    --alto-linea: #4A2723;
+  }
+
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .hoja { max-width: 42rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  h1, h2, h3, .sans { font-family: var(--sans); }
+
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.5rem);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0.5rem 0 0;
+  }
+
+  .cintillo {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--marca);
+  }
+
+  .entradilla { font-size: 1.05rem; color: var(--tinta-suave); margin: 1rem 0 0; }
+
+  .portada { border-bottom: 2px solid var(--tinta); padding-bottom: 1.9rem; margin-bottom: 2rem; }
+
+  h2 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+
+  p { margin: 0.7rem 0 0; }
+  p:first-child { margin-top: 0; }
+
+  .cabecera-seccion {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    padding: 0.9rem 0 0.4rem;
+    border-top: 3px solid var(--canal, var(--marca));
+    margin-top: 3rem;
+  }
+  .marca-canal {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--canal, var(--marca));
+    white-space: nowrap;
+  }
+
+  .seccion-ig { --canal: var(--ig); --canal-suave: var(--ig-suave); }
+  .seccion-wa { --canal: var(--wa); --canal-suave: var(--wa-suave); }
+
+  .pasos { list-style: none; padding: 0; margin: 1.5rem 0 0; }
+
+  .paso {
+    display: grid;
+    grid-template-columns: 2.3rem 1fr;
+    gap: 0 1rem;
+    padding-bottom: 1.6rem;
+    position: relative;
+  }
+  .paso:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 1.15rem;
+    top: 2.6rem;
+    bottom: 0.3rem;
+    width: 1px;
+    background: var(--linea);
+  }
+
+  .numero {
+    grid-row: span 2;
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--canal-suave, var(--marca-suave));
+    color: var(--canal, var(--marca));
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    z-index: 1;
+    position: relative;
+  }
+
+  .cuerpo-paso { padding-top: 0.2rem; }
+  .cuerpo-paso > :first-child { margin-top: 0; }
+
+  .nota, .ojo, .stop {
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-top: 0.9rem;
+    font-size: 0.92rem;
+    border: 1px solid;
+  }
+  .nota { background: var(--marca-suave); border-color: transparent; }
+  .ojo  { background: var(--aviso-fondo); border-color: var(--aviso-linea); }
+  .stop { background: var(--alto-fondo);  border-color: var(--alto-linea); }
+
+  .etiqueta-aviso {
+    font-family: var(--sans);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  .ojo  .etiqueta-aviso { color: var(--aviso); }
+  .stop .etiqueta-aviso { color: var(--alto); }
+  .nota .etiqueta-aviso { color: var(--marca); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--marca-suave);
+    padding: 0.12em 0.38em;
+    border-radius: 4px;
+    word-break: break-word;
+  }
+
+  .anotar {
+    border-left: 3px solid var(--canal, var(--marca));
+    background: var(--tarjeta);
+    padding: 0.7rem 0.95rem;
+    border-radius: 0 8px 8px 0;
+    margin-top: 0.9rem;
+  }
+  .anotar .rotulo {
+    font-family: var(--sans);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tinta-tenue);
+    display: block;
+  }
+  .anotar .valor {
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    display: block;
+    margin-top: 0.2rem;
+  }
+
+  ul.lista { margin: 0.7rem 0 0; padding-left: 1.2rem; }
+  ul.lista li { margin-top: 0.35rem; }
+
+  .casillas { list-style: none; padding: 0; margin: 1rem 0 0; }
+  /**
+   * La casilla va posicionada, no en grid: dentro de un <li> en grid, cada
+   * <strong> o <em> se convierte en su propio ítem y el texto se desarma en
+   * columnas. Con position:absolute el <li> sigue siendo un párrafo normal.
+   */
+  .casillas li {
+    position: relative;
+    padding-left: 1.9rem;
+    margin-top: 0.6rem;
+    font-size: 0.96rem;
+  }
+  .casillas li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.3rem;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--tinta-tenue);
+    border-radius: 3px;
+  }
+
+  .recogida {
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    padding: 1.4rem 1.5rem;
+    margin-top: 1.4rem;
+  }
+  .recogida ol { margin: 1rem 0 0; padding-left: 1.2rem; }
+  .recogida li { margin-top: 0.9rem; }
+  .recogida .nombre { font-family: var(--mono); font-size: 0.9rem; }
+  .renglon {
+    display: block;
+    border-bottom: 1px dashed var(--linea);
+    height: 1.4rem;
+    margin-top: 0.3rem;
+  }
+
+  .pie {
+    margin-top: 3rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--linea);
+    font-size: 0.88rem;
+    color: var(--tinta-tenue);
+  }
+
+  a { color: var(--marca); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+
+  @media print {
+    body { background: #fff; font-size: 11pt; }
+    .paso, .recogida, .anotar { break-inside: avoid; }
+  }
+</style>
+
+<div class="hoja">
+
+  <header class="portada">
+    <p class="cintillo">[NOMBRE_CLÍNICA]</p>
+    <h1>Sacar las llaves de Meta</h1>
+    <p class="entradilla">
+      Son cuatro datos: dos de Instagram y dos de WhatsApp. Se copian de la consola de Meta y se
+      entregan. La conexión al sistema la hace después el equipo técnico.
+    </p>
+  </header>
+
+  <div class="stop">
+    <span class="etiqueta-aviso">Importante</span>
+    <p style="margin-top:0">
+      Estos datos son llaves: quien las tenga puede escribir mensajes en nombre del centro.
+      <strong>No se mandan por WhatsApp ni por correo.</strong> Anotarlos aquí y entregarlos en mano,
+      o guardarlos en el gestor de contraseñas del centro.
+    </p>
+  </div>
+
+  <div class="ojo">
+    <span class="etiqueta-aviso">Hace falta antes de empezar</span>
+    <ul class="casillas" style="margin-top:0.6rem">
+      <li>Ser <strong>administrador</strong> de la cuenta de Meta Business del centro.</li>
+      <li>El Instagram del centro como <strong>cuenta de empresa o creador</strong>, vinculado a la página de Facebook.</li>
+      <li>Un <strong>número para WhatsApp que no sea el de uso diario</strong>: al conectarlo, ese número deja de funcionar en la app del celular.</li>
+    </ul>
+  </div>
+
+  <!-- ============ INSTAGRAM ============ -->
+  <section class="seccion-ig">
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Parte 1</span>
+      <h2>Instagram</h2>
+    </div>
+
+    <ol class="pasos">
+      <li class="paso">
+        <span class="numero">1</span>
+        <div class="cuerpo-paso">
+          <h3>Crear la aplicación</h3>
+          <p>
+            En <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">developers.facebook.com/apps</a>,
+            pulsar <strong>Crear aplicación</strong>. Elegir el caso de uso <strong>Otro</strong> y el
+            tipo <strong>Empresa</strong>. Nombre: «[NOMBRE_CLÍNICA] Web».
+          </p>
+          <div class="ojo">
+            <span class="etiqueta-aviso">Tiene que ser de tipo Empresa</span>
+            <p style="margin-top:0">
+              Con otro tipo, Instagram no aparece luego en la lista de productos y toca empezar de cero.
+            </p>
+          </div>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">2</span>
+        <div class="cuerpo-paso">
+          <h3>Agregar Instagram y vincular la cuenta</h3>
+          <p>
+            En la lista de productos, agregar <strong>Instagram</strong>. Entrar a
+            <strong>configuración de la API con inicio de sesión de Instagram</strong> y vincular la
+            cuenta del centro cuando lo pida.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">3</span>
+        <div class="cuerpo-paso">
+          <h3>Copiar los dos valores</h3>
+          <p>En esa misma pantalla aparecen, uno debajo del otro:</p>
+
+          <div class="anotar">
+            <span class="rotulo">Anotar</span>
+            <span class="valor">Instagram app ID</span>
+          </div>
+          <div class="anotar">
+            <span class="rotulo">Anotar (pulsar «Mostrar»)</span>
+            <span class="valor">Instagram app secret</span>
+          </div>
+
+          <div class="stop">
+            <span class="etiqueta-aviso">Cuidado: hay dos pares parecidos</span>
+            <p style="margin-top:0">
+              En <strong>Configuración → Básica</strong> hay otro identificador y otra clave. Esos son
+              de Facebook y <strong>no sirven</strong>. Los buenos son los que dicen
+              <strong>Instagram</strong> delante y están dentro de la sección de Instagram.
+            </p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ WHATSAPP ============ -->
+  <section class="seccion-wa">
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Parte 2</span>
+      <h2>WhatsApp</h2>
+    </div>
+
+    <ol class="pasos">
+      <li class="paso">
+        <span class="numero">1</span>
+        <div class="cuerpo-paso">
+          <h3>Agregar WhatsApp y registrar el número</h3>
+          <p>
+            En la <strong>misma aplicación</strong> de la parte 1, agregar el producto
+            <strong>WhatsApp</strong>. En <strong>Configuración de la API</strong>, agregar el número
+            del centro y verificarlo con el código que llega por SMS.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">2</span>
+        <div class="cuerpo-paso">
+          <h3>Copiar el identificador del número</h3>
+          <p>Con el número real ya seleccionado, en esa pantalla aparece:</p>
+          <div class="anotar">
+            <span class="rotulo">Anotar</span>
+            <span class="valor">Phone number ID</span>
+          </div>
+          <p style="font-size:0.92rem;color:var(--tinta-suave)">
+            Es un número largo, <strong>no</strong> el número de teléfono.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">3</span>
+        <div class="cuerpo-paso">
+          <h3>Crear el usuario del sistema</h3>
+          <p>
+            En <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer">business.facebook.com</a>
+            → <strong>Configuración del negocio</strong> → <strong>Usuarios</strong> →
+            <strong>Usuarios del sistema</strong> → <strong>Agregar</strong>. Nombre: «Sistema
+            [NOMBRE_CLÍNICA]». Rol: <strong>administrador</strong>.
+          </p>
+          <p>
+            Luego, con ese usuario seleccionado: <strong>Agregar activos</strong> → elegir la
+            <strong>cuenta de WhatsApp</strong> y la <strong>aplicación</strong> creada en la parte 1
+            → darles <strong>control total</strong>.
+          </p>
+          <div class="ojo">
+            <span class="etiqueta-aviso">Sin este paso el token no sirve</span>
+            <p style="margin-top:0">
+              Se genera igual, pero Meta después responde que no hay permiso sobre el número.
+            </p>
+          </div>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">4</span>
+        <div class="cuerpo-paso">
+          <h3>Generar el token</h3>
+          <p>
+            Sobre el mismo usuario del sistema: <strong>Generar nuevo token</strong>. Elegir la
+            aplicación y marcar los dos permisos:
+          </p>
+          <ul class="lista">
+            <li><code>whatsapp_business_messaging</code></li>
+            <li><code>whatsapp_business_management</code></li>
+          </ul>
+          <p>En la duración, elegir <strong>que no caduque</strong>.</p>
+
+          <div class="anotar">
+            <span class="rotulo">Anotar</span>
+            <span class="valor">El token generado</span>
+          </div>
+
+          <div class="stop">
+            <span class="etiqueta-aviso">Se muestra una sola vez</span>
+            <p style="margin-top:0">
+              Copiarlo en ese momento. Si se cierra la ventana sin copiarlo no hay forma de
+              recuperarlo: toca generar otro.
+            </p>
+          </div>
+          <div class="ojo">
+            <span class="etiqueta-aviso">No confundir con el de prueba</span>
+            <p style="margin-top:0">
+              En la pantalla de configuración de la API hay un token a la vista que <strong>dura 24
+              horas</strong>. Ese no sirve. El bueno es este, el del usuario del sistema.
+            </p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ ENTREGA ============ -->
+  <section>
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Al terminar</span>
+      <h2>Lo que hay que entregar</h2>
+    </div>
+
+    <div class="recogida">
+      <ol>
+        <li>
+          <span class="nombre">Instagram app ID</span>
+          <span class="renglon"></span>
+        </li>
+        <li>
+          <span class="nombre">Instagram app secret</span>
+          <span class="renglon"></span>
+        </li>
+        <li>
+          <span class="nombre">Phone number ID</span>
+          <span class="renglon"></span>
+        </li>
+        <li>
+          <span class="nombre">Token de WhatsApp</span>
+          <span class="renglon"></span>
+          <span class="renglon"></span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="nota">
+      <span class="etiqueta-aviso">Nada de esto rompe el sistema</span>
+      <p style="margin-top:0">
+        Mientras las integraciones no estén conectadas, el centro sigue funcionando igual: las citas
+        se agendan, las fichas se llenan y las facturas se emiten. Lo único que falta es el feed de
+        Instagram en la web y el aviso automático por WhatsApp.
+      </p>
+    </div>
+  </section>
+
+  <footer class="pie">
+    <p>
+      Pasos según la consola de Meta a agosto de 2026. Si un botón no se llama exactamente así,
+      buscar el que hable de lo mismo: los nombres cambian, el camino no.
+    </p>
+  </footer>
+
+</div>

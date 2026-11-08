@@ -1,0 +1,58 @@
+{
+  "name": "@clinica/frontend",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "private": true,
+  "description": "Sitio web y panel de [NOMBRE_CLÍNICA]",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "postinstall": "prisma generate",
+    "seed": "tsx prisma/seed.ts",
+    "check:schema": "node scripts/verificar-schema.mjs",
+    "check:sintaxis": "node scripts/verificar-sintaxis.mjs",
+    "check": "npm run check:schema && npm run check:sintaxis && npm run check:exports && npm run check:componentes && npm run typecheck",
+    "check:exports": "node scripts/verificar-exports.mjs",
+    "check:componentes": "node scripts/verificar-componentes.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.716.0",
+    "@aws-sdk/s3-request-presigner": "^3.716.0",
+    "@fontsource/figtree": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
+    "@prisma/client": "^6.2.1",
+    "bcryptjs": "^2.4.3",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.469.0",
+    "next": "^14.2.35",
+    "pdf-lib": "^1.17.1",
+    "prisma": "^6.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "write-excel-file": "^4.1.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

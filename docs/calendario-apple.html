@@ -1,0 +1,520 @@
+<title>Las citas en el Calendario de Apple</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --papel: #EEF1F2;
+    --tarjeta: #FFFFFF;
+    --tinta: #141B1D;
+    --tinta-suave: #4A585B;
+    --tinta-tenue: #77868A;
+    --linea: #D5DCDE;
+
+    --marca: #0E6B62;
+    --marca-suave: #E2EFED;
+
+    --ios: #1F5FA8;
+    --ios-suave: #E4EDF7;
+    --mac: #5B4B8A;
+    --mac-suave: #ECE8F5;
+
+    --aviso: #8A5510;
+    --aviso-fondo: #FBF0DE;
+    --aviso-linea: #E8CFA0;
+
+    --alto: #A33028;
+    --alto-fondo: #FAE9E7;
+    --alto-linea: #EDC6C1;
+
+    --sans: 'Familjen Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono: 'IBM Plex Mono', 'Consolas', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel: #0F1618;
+      --tarjeta: #172023;
+      --tinta: #E8EDEE;
+      --tinta-suave: #A9B7BA;
+      --tinta-tenue: #7C8A8D;
+      --linea: #2A3639;
+      --marca: #4FBFB0;
+      --marca-suave: #16302E;
+      --ios: #8ABAEC;
+      --ios-suave: #16232F;
+      --mac: #B3A5DC;
+      --mac-suave: #211D2F;
+      --aviso: #E0B268;
+      --aviso-fondo: #2B2213;
+      --aviso-linea: #4A3A1C;
+      --alto: #E89289;
+      --alto-fondo: #2E1A18;
+      --alto-linea: #4A2723;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --papel: #0F1618;
+    --tarjeta: #172023;
+    --tinta: #E8EDEE;
+    --tinta-suave: #A9B7BA;
+    --tinta-tenue: #7C8A8D;
+    --linea: #2A3639;
+    --marca: #4FBFB0;
+    --marca-suave: #16302E;
+    --ios: #8ABAEC;
+    --ios-suave: #16232F;
+    --mac: #B3A5DC;
+    --mac-suave: #211D2F;
+    --aviso: #E0B268;
+    --aviso-fondo: #2B2213;
+    --aviso-linea: #4A3A1C;
+    --alto: #E89289;
+    --alto-fondo: #2E1A18;
+    --alto-linea: #4A2723;
+  }
+
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .hoja { max-width: 42rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  h1, h2, h3, .sans { font-family: var(--sans); }
+
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.5rem);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0.5rem 0 0;
+  }
+
+  .cintillo {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--marca);
+  }
+
+  .entradilla { font-size: 1.05rem; color: var(--tinta-suave); margin: 1rem 0 0; }
+
+  .portada { border-bottom: 2px solid var(--tinta); padding-bottom: 1.9rem; margin-bottom: 2rem; }
+
+  h2 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+
+  p { margin: 0.7rem 0 0; }
+  p:first-child { margin-top: 0; }
+
+  .cabecera-seccion {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    padding: 0.9rem 0 0.4rem;
+    border-top: 3px solid var(--canal, var(--marca));
+    margin-top: 3rem;
+  }
+  .marca-canal {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--canal, var(--marca));
+    white-space: nowrap;
+  }
+
+  .seccion-ios { --canal: var(--ios); --canal-suave: var(--ios-suave); }
+  .seccion-mac { --canal: var(--mac); --canal-suave: var(--mac-suave); }
+
+  .pasos { list-style: none; padding: 0; margin: 1.5rem 0 0; }
+
+  .paso {
+    display: grid;
+    grid-template-columns: 2.3rem 1fr;
+    gap: 0 1rem;
+    padding-bottom: 1.6rem;
+    position: relative;
+  }
+  .paso:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 1.15rem;
+    top: 2.6rem;
+    bottom: 0.3rem;
+    width: 1px;
+    background: var(--linea);
+  }
+
+  .numero {
+    grid-row: span 2;
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--canal-suave, var(--marca-suave));
+    color: var(--canal, var(--marca));
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    z-index: 1;
+    position: relative;
+  }
+
+  .cuerpo-paso { padding-top: 0.2rem; }
+  .cuerpo-paso > :first-child { margin-top: 0; }
+
+  .nota, .ojo, .stop {
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-top: 0.9rem;
+    font-size: 0.92rem;
+    border: 1px solid;
+  }
+  .nota { background: var(--marca-suave); border-color: transparent; }
+  .ojo  { background: var(--aviso-fondo); border-color: var(--aviso-linea); }
+  .stop { background: var(--alto-fondo);  border-color: var(--alto-linea); }
+
+  .etiqueta-aviso {
+    font-family: var(--sans);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  .ojo  .etiqueta-aviso { color: var(--aviso); }
+  .stop .etiqueta-aviso { color: var(--alto); }
+  .nota .etiqueta-aviso { color: var(--marca); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--marca-suave);
+    padding: 0.12em 0.38em;
+    border-radius: 4px;
+    word-break: break-word;
+  }
+
+  .ruta {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: block;
+    margin-top: 0.55rem;
+    padding: 0.55rem 0.8rem;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 8px;
+    line-height: 1.5;
+  }
+  .ruta .sep { color: var(--tinta-tenue); padding: 0 0.15rem; }
+
+  ul.lista { margin: 0.7rem 0 0; padding-left: 1.2rem; }
+  ul.lista li { margin-top: 0.35rem; }
+
+  .casillas { list-style: none; padding: 0; margin: 1rem 0 0; }
+  /**
+   * La casilla va posicionada, no en grid: dentro de un <li> en grid, cada
+   * <strong> o <em> se convierte en su propio ítem y el texto se desarma en
+   * columnas. Con position:absolute el <li> sigue siendo un párrafo normal.
+   */
+  .casillas li {
+    position: relative;
+    padding-left: 1.9rem;
+    margin-top: 0.6rem;
+    font-size: 0.96rem;
+  }
+  .casillas li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.3rem;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--tinta-tenue);
+    border-radius: 3px;
+  }
+
+  .problemas {
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    padding: 0.4rem 1.5rem 1.4rem;
+    margin-top: 1.4rem;
+  }
+  .problemas dt {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.98rem;
+    margin-top: 1.3rem;
+  }
+  .problemas dd { margin: 0.3rem 0 0; font-size: 0.95rem; color: var(--tinta-suave); }
+
+  .pie {
+    margin-top: 3rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--linea);
+    font-size: 0.88rem;
+    color: var(--tinta-tenue);
+  }
+
+  a { color: var(--marca); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+
+  @media print {
+    body { background: #fff; font-size: 11pt; }
+    .paso, .problemas, .ruta { break-inside: avoid; }
+  }
+</style>
+
+<div class="hoja">
+
+  <header class="portada">
+    <p class="cintillo">[NOMBRE_CLÍNICA]</p>
+    <h1>Las citas en el Calendario de Apple</h1>
+    <p class="entradilla">
+      El sistema guarda cada cita en el calendario de Google del centro. Esto es para que esas citas
+      aparezcan dentro de la app <strong>Calendario</strong> del iPhone y del Mac, al lado de los
+      eventos personales. No hay nada que instalar, nada que pagar y no toma más de cinco minutos.
+    </p>
+  </header>
+
+  <div class="ojo">
+    <span class="etiqueta-aviso">Antes de empezar</span>
+    <ul class="casillas" style="margin-top:0.6rem">
+      <li>Tener a mano el <strong>correo de Google del centro y su contraseña</strong>. Tiene que ser
+        exactamente la misma cuenta que aparece conectada en el panel, en <em>Integraciones</em>.
+        Con otra cuenta el calendario se ve vacío y parece que falló.</li>
+      <li>El celular con internet.</li>
+      <li>Si la cuenta pide código de verificación, tener cerca dónde llega ese código.</li>
+    </ul>
+  </div>
+
+  <div class="stop">
+    <span class="etiqueta-aviso">Mirar sí, crear citas no</span>
+    <p style="margin-top:0">
+      En el teléfono la agenda se <strong>consulta</strong>. Una cita creada a mano ahí no existe
+      para el sistema: no tiene paciente, no manda recordatorio, no bloquea el horario — y alguien
+      puede reservar por internet encima de ella. <strong>Las citas se crean, se mueven y se
+      cancelan desde el panel</strong>, y aparecen solas en el teléfono.
+    </p>
+  </div>
+
+  <!-- ============ IPHONE ============ -->
+  <section class="seccion-ios">
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Parte 1</span>
+      <h2>En el iPhone o el iPad</h2>
+    </div>
+
+    <ol class="pasos">
+      <li class="paso">
+        <span class="numero">1</span>
+        <div class="cuerpo-paso">
+          <h3>Abrir los ajustes de Calendario</h3>
+          <p>
+            Entrá a <strong>Ajustes</strong> y, en el buscador de arriba, escribí
+            <strong>Cuentas</strong>. Tocá el resultado que aparece bajo <em>Calendario</em>.
+          </p>
+          <div class="nota">
+            <span class="etiqueta-aviso">Por qué el buscador</span>
+            <p style="margin-top:0">
+              El camino cambia según la versión del iPhone —en unos es
+              <em>Ajustes → Calendario → Cuentas</em> y en otros
+              <em>Ajustes → Apps → Calendario → Cuentas</em>—. Buscando se llega igual en las dos.
+            </p>
+          </div>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">2</span>
+        <div class="cuerpo-paso">
+          <h3>Agregar la cuenta</h3>
+          <span class="ruta">
+            Agregar cuenta <span class="sep">›</span> Google
+          </span>
+          <p>Se abre una pantalla de Google dentro del teléfono. Es normal.</p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">3</span>
+        <div class="cuerpo-paso">
+          <h3>Iniciar sesión</h3>
+          <p>
+            Escribí el correo del centro y su contraseña. Si pide un código de verificación,
+            ponelo y continuá.
+          </p>
+          <div class="stop">
+            <span class="etiqueta-aviso">La contraseña</span>
+            <p style="margin-top:0">
+              La escribe directamente la persona dueña de la cuenta. No se dicta en voz alta, no se
+              manda por WhatsApp y no se le pasa a nadie más.
+            </p>
+          </div>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">4</span>
+        <div class="cuerpo-paso">
+          <h3>Dejar prendido solo Calendarios</h3>
+          <p>
+            Al terminar aparece una lista de interruptores. Dejá <strong>Calendarios</strong>
+            encendido y apagá <strong>Correo</strong>, <strong>Contactos</strong> y
+            <strong>Notas</strong>: así entra la agenda del centro y nada más. Tocá
+            <strong>Guardar</strong>.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">5</span>
+        <div class="cuerpo-paso">
+          <h3>Comprobar que se vea</h3>
+          <p>
+            Abrí la app <strong>Calendario</strong> y tocá <strong>Calendarios</strong>, abajo en el
+            centro. El calendario del centro tiene que estar marcado con un chulito. Volvé y ya
+            deberían verse las citas.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">6</span>
+        <div class="cuerpo-paso">
+          <h3>Traer también lo viejo</h3>
+          <p>
+            De fábrica el iPhone solo baja el último mes. Para ver el historial completo:
+          </p>
+          <span class="ruta">
+            Ajustes <span class="sep">›</span> Calendario <span class="sep">›</span> Sincronizar
+            <span class="sep">›</span> Todos los eventos
+          </span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ MAC ============ -->
+  <section class="seccion-mac">
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Parte 2</span>
+      <h2>En el Mac</h2>
+    </div>
+
+    <p>Solo si además usa el computador. Es lo mismo, con otros nombres.</p>
+
+    <ol class="pasos">
+      <li class="paso">
+        <span class="numero">1</span>
+        <div class="cuerpo-paso">
+          <h3>Cuentas de internet</h3>
+          <span class="ruta">
+            Menú Apple <span class="sep">›</span> Ajustes del Sistema
+            <span class="sep">›</span> Cuentas de Internet
+          </span>
+          <p>
+            En macOS más antiguos se llama <em>Preferencias del Sistema → Cuentas de Internet</em>.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">2</span>
+        <div class="cuerpo-paso">
+          <h3>Añadir Google e iniciar sesión</h3>
+          <p>
+            <strong>Añadir cuenta → Google</strong>, y la misma cuenta del centro. Cuando pregunte
+            qué usar, dejá marcado únicamente <strong>Calendarios</strong>.
+          </p>
+        </div>
+      </li>
+
+      <li class="paso">
+        <span class="numero">3</span>
+        <div class="cuerpo-paso">
+          <h3>Marcarlo en la app</h3>
+          <p>
+            Abrí <strong>Calendario</strong>. En la lista de la izquierda tiene que aparecer el
+            calendario del centro, marcado. Si no se ve la lista:
+            <em>menú Visualización → Mostrar lista de calendarios</em>.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ PROBLEMAS ============ -->
+  <section>
+    <div class="cabecera-seccion">
+      <span class="marca-canal">Parte 3</span>
+      <h2>Si algo no aparece</h2>
+    </div>
+
+    <dl class="problemas">
+      <dt>Se agregó la cuenta pero el calendario está vacío</dt>
+      <dd>
+        Casi siempre es la cuenta equivocada. Revisá en <em>Ajustes → Calendario → Cuentas</em> que
+        el correo sea el mismo que figura conectado en el panel, en <em>Integraciones</em>.
+      </dd>
+
+      <dt>Se ven algunas citas pero faltan las de hace meses</dt>
+      <dd>Es el paso 6: <em>Sincronizar → Todos los eventos</em>.</dd>
+
+      <dt>Aparecen las viejas pero no las nuevas</dt>
+      <dd>
+        Entrá al panel, a <em>Integraciones</em>, y mirá que Google siga conectado. Si dice que se
+        desconectó, se vuelve a pulsar Conectar y el teléfono se pone al día solo.
+      </dd>
+
+      <dt>No se actualiza en el momento</dt>
+      <dd>
+        En la vista de mes, deslizá el dedo hacia abajo para refrescar. El iPhone también revisa
+        solo cada pocos minutos, así que a veces basta con esperar.
+      </dd>
+
+      <dt>El calendario del centro no sale en la lista</dt>
+      <dd>
+        En la app Calendario, botón <em>Calendarios</em>, tocá para marcarlo. Estando desmarcado
+        existe pero no se dibuja.
+      </dd>
+    </dl>
+
+    <div class="nota">
+      <span class="etiqueta-aviso">Dos tranquilidades</span>
+      <p style="margin-top:0">
+        Agregar la cuenta del centro <strong>no comparte los eventos personales</strong> con nadie:
+        el calendario propio sigue siendo propio y el centro no lo ve. Y el día que haga falta
+        quitarlo, es <em>Ajustes → Calendario → Cuentas → (el correo del centro) → Eliminar
+        cuenta</em>; no se borra ninguna cita del sistema.
+      </p>
+    </div>
+  </section>
+
+  <footer class="pie">
+    <p>
+      Esta hoja es solo para ver la agenda desde Apple. Los tokens de Instagram y WhatsApp son otro
+      trámite distinto, en <code>docs/sacar-tokens-meta.html</code>.
+    </p>
+  </footer>
+
+</div>

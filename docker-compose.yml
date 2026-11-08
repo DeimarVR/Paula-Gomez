@@ -1,0 +1,61 @@
+# Entorno de desarrollo completo: base de datos, API y web.
+#
+#   docker compose up -d db     → solo PostgreSQL (lo más habitual)
+#   docker compose up           → todo el stack
+#
+# Antes de levantar la API copia los archivos de entorno:
+#   cp backend/.env.example backend/.env
+#   cp frontend/.env.example frontend/.env.local
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: clinica-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinica
+      POSTGRES_PASSWORD: clinica
+      POSTGRES_DB: clinica
+    ports:
+      - '5432:5432'
+    volumes:
+      - clinica_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U clinica -d clinica']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: clinica-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      # Dentro de la red de Docker la base de datos se llama "db", no "localhost".
+      DATABASE_URL: postgresql://clinica:clinica@db:5432/clinica?schema=public
+    ports:
+      - '4000:4000'
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: clinica-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      # El navegador sale a localhost; el servidor de Next habla con el contenedor.
+      API_INTERNAL_URL: http://backend:4000
+    ports:
+      - '3000:3000'
+
+volumes:
+  clinica_db:

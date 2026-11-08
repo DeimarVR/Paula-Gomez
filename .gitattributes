@@ -1,0 +1,16 @@
+# Finales de linea: LF en el repositorio y tambien en el arbol de trabajo.
+# Sin esto, un checkout en Windows deja CRLF y los 100+ archivos aparecen
+# modificados sin que nadie los haya tocado.
+* text=auto eol=lf
+
+# Binarios: git no debe convertir nada aqui.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.svg  text eol=lf
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary

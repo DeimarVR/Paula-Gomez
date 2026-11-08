@@ -1,0 +1,1408 @@
+// [NOMBRE_CLÍNICA] — esquema de datos
+// Base de datos: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios internos (panel administrativo)
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  PROFESIONAL
+  RECEPCION
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         Role      @default(PROFESIONAL)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessionsPerformed TreatmentSession[] @relation("SessionProfessional")
+
+  /// Firma guardada del profesional (data URL PNG). Se propone por defecto al
+  /// emitir un documento; es la plantilla, no lo que queda impreso.
+  signature String? @db.Text
+
+  invoices Invoice[]
+  records  ClinicalRecord[]
+  photoRecords PhotoRecord[]
+  facialRecords FacialRecord[]
+  consentTemplates ConsentTemplate[]
+  signedConsents   SignedConsent[]
+  payments Payment[]
+  cashCloses CashClose[]
+  stockMoves StockMove[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de servicios / tratamientos
+// ---------------------------------------------------------------------------
+
+model Service {
+  id             String  @id @default(cuid())
+  slug           String  @unique
+  name           String
+  shortDesc      String
+  description    String
+  /// Duración estimada de una sesión, en minutos. Se usa para calcular la
+  /// franja horaria que se bloquea en Google Calendar.
+  durationMin    Int     @default(60)
+  /// Precio de referencia en COP. `null` = "consultar".
+  priceCop       Int?
+  /// Número de sesiones recomendadas del protocolo.
+  sessionsAdvice Int?
+  category       String  @default("General")
+  imageUrl       String?
+  icon           String  @default("sparkles")
+  benefits       String[] @default([])
+  featured       Boolean @default(false)
+  /// Se puede usar dentro del centro: planes, citas, facturas, fichas.
+  active         Boolean @default(true)
+  /// Sale en la página pública.
+  ///
+  /// Separado de `active` a propósito. Un tratamiento creado a las volandas
+  /// desde una ficha sirve de inmediato para agendar y facturar, pero no puede
+  /// aparecer en la web con la descripción vacía. Se publica cuando alguien lo
+  /// termina de escribir en Tratamientos.
+  published      Boolean @default(true)
+  sortOrder      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plans           TreatmentPlan[]
+  appointments    Appointment[]
+  photoRecords    PhotoRecord[]
+  clinicalEntries ClinicalEntry[]
+  facialEntries      FacialEntry[] @relation("FacialEntryService")
+  facialNextControls FacialEntry[] @relation("FacialEntryNextControl")
+  consentTemplates   ConsentTemplate[]
+
+  @@index([active, sortOrder])
+  @@map("services")
+}
+
+// ---------------------------------------------------------------------------
+// Pacientes
+// ---------------------------------------------------------------------------
+
+enum Gender {
+  FEMENINO
+  MASCULINO
+  OTRO
+  NO_DECLARA
+}
+
+model Patient {
+  id          String    @id @default(cuid())
+  fullName    String
+  documentId  String?   @unique
+  email       String?
+  /// Teléfono en formato internacional sin "+" (ej: 573001112233). Se usa
+  /// para los enlaces de WhatsApp y para la API de WhatsApp Cloud.
+  phone       String
+  birthDate   DateTime?
+  gender      Gender    @default(NO_DECLARA)
+  city        String?   @default("")
+  /// Antecedentes personales. En el expediente sale como «Antecedentes
+  /// personales»; el nombre de la columna es de antes y se conserva.
+  medicalNotes String?
+
+  // --- Expediente general -------------------------------------------------
+  /// Qué se está tratando: motivo de consulta.
+  consultReason   String?
+  /// Diagnóstico o impresión diagnóstica.
+  diagnosis       String?
+  /// Plan de tratamiento, en palabras de la especialista.
+  carePlan        String?
+  /// Cuántos controles prevé el plan. Null = el plan no los cuenta.
+  plannedControls Int?
+  /// Desde cuándo se cuentan los controles del plan actual. Se fija al poner
+  /// el número de controles, para que un plan nuevo no herede los del viejo.
+  controlsSince   DateTime?
+  allergies       String?
+  surgicalHistory String?
+  familyHistory   String?
+  /// Última vez que alguien tocó el expediente, y quién. Es lo que permite
+  /// leer «actualizado por la Dra. X hace dos días» antes de fiarse de él.
+  clinicalUpdatedAt DateTime?
+  clinicalUpdatedBy String?
+  /// Token público e irrepetible: el paciente consulta su avance en
+  /// /seguimiento/<publicToken> sin necesidad de crear una cuenta.
+  publicToken String    @unique
+  /// Autorización firmada para publicar fotos de antes/después.
+  photoConsent Boolean  @default(false)
+  active      Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices     Invoice[]
+  records      ClinicalRecord[]
+  plans        TreatmentPlan[]
+  appointments Appointment[]
+  photoRecords PhotoRecord[]
+  stockMoves   StockMove[]
+  facialRecords FacialRecord[]
+  signedConsents SignedConsent[]
+  medications    PatientMedication[]
+  evolutionNotes EvolutionNote[]
+  paperSheets    PaperSheet[]
+
+  @@index([fullName])
+  @@index([phone])
+  @@map("patients")
+}
+
+/// Un medicamento que toma el paciente.
+///
+/// Suspenderlo no lo borra: queda con `active` en falso y la fecha en que se
+/// dejó, porque «lo tomó hasta marzo» también es historia clínica.
+model PatientMedication {
+  id        String    @id @default(cuid())
+  patientId String
+  /// «Losartán 50 mg».
+  name      String
+  /// «1 tableta cada 24 h, en la mañana». Texto libre: así se escribe en una fórmula.
+  dose      String?
+  notes     String?
+  startedOn DateTime?
+  active    Boolean   @default(true)
+  endedOn   DateTime?
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, active])
+  @@map("patient_medications")
+}
+
+/// Una nota de evolución: lo que se vio y se decidió en una consulta.
+model EvolutionNote {
+  id         String   @id @default(cuid())
+  patientId  String
+  body       String
+  /// El día de la consulta, que no siempre es el día en que se escribe.
+  noteDate   DateTime @default(now())
+  authorId   String?
+  /// El nombre se copia al escribir: si el usuario se borra algún día, la
+  /// nota tiene que seguir diciendo quién la firmó.
+  authorName String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, noteDate])
+  @@map("evolution_notes")
+}
+
+/// La foto (o el PDF) de una hoja que se llenó a mano.
+///
+/// El centro sigue diligenciando papel en consulta. En vez de transcribirlo,
+/// se fotografía y queda en el expediente, privado.
+model PaperSheet {
+  id         String    @id @default(cuid())
+  patientId  String
+  /// «Hoja de ingreso», «Control», «Fórmula médica».
+  title      String
+  sheetDate  DateTime?
+  /// Ruta interna `/api/archivos/expedientes/...`, nunca la URL del bucket.
+  fileUrl    String
+  mimeType   String
+  notes      String?
+  uploadedBy String?
+  createdAt  DateTime  @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt])
+  @@map("paper_sheets")
+}
+
+// ---------------------------------------------------------------------------
+// Plan de tratamiento y seguimiento de sesiones
+// ---------------------------------------------------------------------------
+
+enum PlanStatus {
+  ACTIVO
+  PAUSADO
+  FINALIZADO
+  CANCELADO
+}
+
+model TreatmentPlan {
+  id            String     @id @default(cuid())
+  patientId     String
+  serviceId     String
+  title         String
+  /// Objetivo pactado con el paciente, visible en su portal de seguimiento.
+  goal          String?
+  totalSessions Int        @default(1)
+  intervalDays  Int        @default(21)
+  startDate     DateTime   @default(now())
+  status        PlanStatus @default(ACTIVO)
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient  Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  service  Service            @relation(fields: [serviceId], references: [id])
+  sessions TreatmentSession[]
+
+  @@index([patientId, status])
+  @@map("treatment_plans")
+}
+
+enum SessionStatus {
+  PROGRAMADA
+  COMPLETADA
+  REPROGRAMADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+model TreatmentSession {
+  id            String        @id @default(cuid())
+  planId        String
+  /// 1, 2, 3… dentro del plan.
+  sessionNumber Int
+  scheduledAt   DateTime
+  performedAt   DateTime?
+  status        SessionStatus @default(PROGRAMADA)
+
+  professionalId String?
+
+  /// Notas clínicas internas — NUNCA se exponen en el portal del paciente.
+  clinicalNotes String?
+  /// Resumen redactado para el paciente — sí se muestra en su portal.
+  patientSummary String?
+  /// Indicaciones de cuidado en casa hasta la próxima sesión.
+  homeCare      String?
+  /// Productos / activos aplicados en la sesión.
+  productsUsed  String[] @default([])
+
+  /// Mediciones de la sesión: densidad, grosor, escala de Hamilton/Ludwig,
+  /// porcentaje de caída, etc. Estructura libre: { "densidad": 112, ... }
+  metrics Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan         TreatmentPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  professional User?          @relation("SessionProfessional", fields: [professionalId], references: [id])
+  photos       SessionPhoto[]
+  appointment  Appointment?
+
+  @@unique([planId, sessionNumber])
+  @@index([scheduledAt])
+  @@map("treatment_sessions")
+}
+
+enum PhotoType {
+  ANTES
+  PROGRESO
+  DESPUES
+}
+
+model SessionPhoto {
+  id        String    @id @default(cuid())
+  sessionId String
+  url       String
+  type      PhotoType @default(PROGRESO)
+  /// Ángulo de la toma para poder comparar la misma vista entre sesiones.
+  angle     String    @default("frontal")
+  caption   String?
+  /// Visible para el paciente en su portal de seguimiento.
+  visibleToPatient Boolean @default(true)
+  createdAt DateTime  @default(now())
+
+  session TreatmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, angle])
+  @@map("session_photos")
+}
+
+// ---------------------------------------------------------------------------
+// Reservas / agenda
+// ---------------------------------------------------------------------------
+
+enum AppointmentStatus {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+  NO_ASISTIO
+}
+
+enum AppointmentSource {
+  WEB
+  WHATSAPP
+  TELEFONO
+  PRESENCIAL
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  serviceId String
+  patientId String?
+
+  /// Datos de contacto tal como los dejó la persona en el formulario web.
+  /// Se conservan aunque después se cree la ficha de paciente.
+  contactName  String
+  contactPhone String
+  contactEmail String?
+  message      String?
+
+  startsAt DateTime
+  endsAt   DateTime
+  status   AppointmentStatus @default(PENDIENTE)
+  source   AppointmentSource @default(WEB)
+
+  /// ID del evento creado en Google Calendar (para editarlo o borrarlo).
+  googleEventId  String?
+  googleHtmlLink String?
+
+  /// Token para que la persona confirme o cancele desde el enlace que recibe.
+  manageToken String @unique
+
+  whatsappConfirmationSentAt DateTime?
+  whatsappReminderSentAt     DateTime?
+
+  /// La canceló el centro al cerrar el día, y el paciente tiene que elegir
+  /// otro horario. Mientras esté en true, su enlace le ofrece reagendar en vez
+  /// de decirle «cita cancelada» y nada más.
+  needsReschedule     Boolean   @default(false)
+  /// Cuándo salió la disculpa por el día cerrado. Null = falta mandarla, y el
+  /// panel la deja lista para enviar a mano.
+  closureNoticeSentAt DateTime?
+
+  /// Sesión del plan a la que corresponde esta cita, si aplica.
+  sessionId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  service Service           @relation(fields: [serviceId], references: [id])
+  patient Patient?          @relation(fields: [patientId], references: [id])
+  session TreatmentSession? @relation(fields: [sessionId], references: [id])
+  /// Fila del control de pacientes que agendó esta cita, si vino de ahí.
+  clinicalEntry ClinicalEntry?
+  facialEntry   FacialEntry?
+  /// Las veces que a este paciente se le ofreció adelantar su cita.
+  slotOfferInvites SlotOfferInvite[]
+
+  @@index([startsAt, status])
+  @@map("appointments")
+}
+
+/// Horario de atención por día de la semana (0 = domingo … 6 = sábado).
+model BusinessHour {
+  id        String  @id @default(cuid())
+  dayOfWeek Int     @unique
+  /// "08:00" en hora local de la clínica.
+  openTime  String
+  closeTime String
+  /// Pausa de almuerzo opcional.
+  breakStart String?
+  breakEnd   String?
+  active    Boolean @default(true)
+
+  @@map("business_hours")
+}
+
+/// Días u horas bloqueadas (festivos, vacaciones, congresos).
+model Blackout {
+  id      String   @id @default(cuid())
+  startsAt DateTime
+  endsAt   DateTime
+  reason  String?
+  /// "2026-11-20" cuando es un día completo cerrado desde el panel. Único: un
+  /// día no se cierra dos veces, y reabrirlo es borrar esta fila.
+  dateKey String?  @unique
+
+  @@index([startsAt, endsAt])
+  @@map("blackouts")
+}
+
+enum SlotOfferStatus {
+  /// Enviada y esperando a que alguien la tome.
+  ABIERTA
+  /// Alguien adelantó su cita a este horario.
+  TOMADA
+  /// Se acercó la hora sin que nadie la tomara.
+  VENCIDA
+  /// El horario dejó de estar libre por otro camino (otra reserva, día cerrado).
+  ANULADA
+}
+
+/// Un horario que se liberó y se ofreció a quienes tenían cita más adelante.
+///
+/// El primero que pulsa su enlace se lo queda. Lo que decide quién llegó
+/// primero es el cerrojo de la agenda al aceptar, no el orden de los mensajes.
+model SlotOffer {
+  id       String          @id @default(cuid())
+  startsAt DateTime
+  endsAt   DateTime
+  status   SlotOfferStatus @default(ABIERTA)
+  /// La cita que dejó libre el horario (cancelada o movida). Sin llave: si esa
+  /// cita se borra algún día, la oferta sigue contando lo que pasó.
+  sourceAppointmentId  String?
+  /// La cita que se adelantó a este horario.
+  takenByAppointmentId String?
+  takenAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invites SlotOfferInvite[]
+
+  @@index([status, startsAt])
+  @@map("slot_offers")
+}
+
+/// Una invitación concreta: a qué paciente se le ofreció, con qué enlace.
+model SlotOfferInvite {
+  id            String    @id @default(cuid())
+  offerId       String
+  appointmentId String
+  /// La llave del enlace /oferta/<token>.
+  token         String    @unique
+  /// Null = no salió sola por WhatsApp; el panel la deja lista para enviar.
+  sentAt        DateTime?
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  offer       SlotOffer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, appointmentId])
+  @@index([appointmentId])
+  @@map("slot_offer_invites")
+}
+
+// ---------------------------------------------------------------------------
+// Galería pública de antes / después
+// ---------------------------------------------------------------------------
+
+/// Registro fotográfico del tratamiento de un paciente.
+///
+/// Es material CLÍNICO, de uso interno: le sirve al profesional para comparar
+/// cómo va un paciente entre una sesión y otra. No se publica en ningún lado.
+/// Los casos que sí salen en el sitio están escritos en `config.ts`, elegidos
+/// a mano, y no tienen nada que ver con esta tabla.
+///
+/// Reemplaza al viejo `GalleryCase`, que era justo lo contrario: una vitrina
+/// con `published`, `featured` y `sortOrder`. Se cambió el modelo entero y no
+/// solo la interfaz porque dejar los campos de publicación ahí era dejar
+/// puesto el gatillo: bastaba un `published: true` de más —en una consulta, en
+/// un seed, en una migración futura— para que la foto de un paciente
+/// terminara en la portada.
+model PhotoRecord {
+  id        String  @id @default(cuid())
+  /// Obligatorio: una foto clínica sin paciente no es de nadie.
+  patientId String
+  serviceId String?
+
+  title String
+  notes String?
+
+  /// Autorización del paciente para SER FOTOGRAFIADO.
+  ///
+  /// Sigue haciendo falta aunque nada se publique: la Ley 1581 cubre el
+  /// tratamiento del dato, no solo su difusión.
+  consentSigned Boolean @default(false)
+
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos  PhotoRecordItem[]
+  patient Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id])
+  createdBy User?  @relation(fields: [createdById], references: [id])
+
+  @@index([patientId, createdAt])
+  @@map("photo_records")
+}
+
+/// Una foto dentro del registro.
+model PhotoRecordItem {
+  id       String @id @default(cuid())
+  recordId String
+
+  url String
+
+  /// ANTES / PROGRESO / DESPUES. Es el mismo enum que ya usaban las fotos de
+  /// sesión: la clasificación de una foto clínica no cambia según dónde
+  /// cuelgue.
+  type PhotoType @default(PROGRESO)
+
+  /// Ángulo de la toma. Comparar dos fotos del mismo paciente solo dice algo
+  /// si están tomadas desde el mismo sitio.
+  angle String @default("frontal")
+
+  caption String?
+
+  /// Cuándo se tomó, que no siempre es cuándo se subió.
+  takenAt DateTime @default(now())
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  record PhotoRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId, sortOrder])
+  @@map("photo_record_items")
+}
+
+model Testimonial {
+  id        String  @id @default(cuid())
+  authorName String
+  city      String? @default("")
+  quote     String
+  rating    Int     @default(5)
+  published Boolean @default(true)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  subject   String?
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([handled, createdAt])
+  @@map("contact_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Integraciones: Instagram y Google
+// ---------------------------------------------------------------------------
+
+/// Almacén del token de Instagram. Se guarda en base de datos (no solo en
+/// variables de entorno) porque el token se auto-renueva cada pocos días y el
+/// valor nuevo debe sobrevivir a los reinicios y despliegues del servidor.
+model IntegrationToken {
+  id String @id @default(cuid())
+
+  /// "instagram" | "google_calendar" | "whatsapp"
+  provider String @unique
+
+  accessToken  String
+  refreshToken String?
+  /// Momento en que expira `accessToken`.
+  expiresAt    DateTime?
+  scope        String?
+  accountId    String?
+  accountName  String?
+
+  lastRefreshedAt DateTime?
+  lastError       String?
+  refreshCount    Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("integration_tokens")
+}
+
+enum InstagramMediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL_ALBUM
+}
+
+/// Copia local del feed de Instagram. La landing lee de aquí, así que la web
+/// sigue mostrando publicaciones aunque la API de Meta esté caída.
+model InstagramPost {
+  id           String             @id @default(cuid())
+  igId         String             @unique
+  caption      String?
+  mediaType    InstagramMediaType @default(IMAGE)
+  mediaUrl     String
+  thumbnailUrl String?
+  permalink    String
+  username     String?
+  postedAt     DateTime
+  /// Los media_url de Meta caducan; guardamos cuándo se refrescó por última vez.
+  syncedAt     DateTime           @default(now())
+  hidden       Boolean            @default(false)
+
+  @@index([postedAt])
+  @@map("instagram_posts")
+}
+
+/// Ajustes editables desde el panel sin necesidad de redeploy.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ---------------------------------------------------------------------------
+// Facturación
+// ---------------------------------------------------------------------------
+
+enum DocumentType {
+  FACTURA
+  COTIZACION
+}
+
+enum DocumentStatus {
+  BORRADOR
+  EMITIDA
+  PAGADA
+  ANULADA
+}
+
+/// Factura o cotización del centro. Reproduce el talonario de papel.
+///
+/// El dinero se guarda en PESOS ENTEROS, nunca en decimales: en Colombia no se
+/// factura con centavos, y un `Float` acumula errores de redondeo que en una
+/// suma de varias líneas terminan descuadrando el total contra el papel.
+model Invoice {
+  id     String         @id @default(cuid())
+  /// Consecutivo propio del sistema. Ver `nextInvoiceNumber` en el servidor:
+  /// se asigna dentro de una transacción para que dos facturas simultáneas no
+  /// puedan quedarse con el mismo número.
+  number Int            @unique
+  series String         @default("FAC")
+  type   DocumentType   @default(FACTURA)
+  status DocumentStatus @default(EMITIDA)
+
+  /// Fecha del documento. Se autocompleta con el día en curso y es editable:
+  /// a veces se registra una factura del día anterior.
+  issueDate DateTime
+
+  /// Datos del cliente. Se copian del paciente al emitir y quedan
+  /// CONGELADOS aquí a propósito: si mañana el paciente cambia de teléfono,
+  /// una factura ya emitida no puede cambiar sola.
+  patientId      String?
+  clientName     String
+  clientDocument String?
+  clientPhone    String?
+
+  items InvoiceItem[]
+
+  /// Suma de las líneas.
+  subtotal Int
+  discount Int @default(0)
+  total    Int
+  /// ABONO y SALDO, como en el papel.
+  deposit  Int @default(0)
+  balance  Int
+
+  notes       String?
+  createdById String?
+
+  /// Firma de quien elabora, en data URL (PNG). Se copia aquí al emitir y no
+  /// cambia después: si la persona cambia su firma guardada mañana, un
+  /// documento ya emitido tiene que seguir mostrando la que llevaba.
+  signature   String? @db.Text
+  /// Nombre que va bajo la línea de "firma autorizada".
+  signedBy    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient    Patient? @relation(fields: [patientId], references: [id])
+  createdBy  User?    @relation(fields: [createdById], references: [id])
+  payments   Payment[]
+  stockMoves StockMove[]
+
+  @@index([issueDate])
+  @@index([patientId])
+  @@map("invoices")
+}
+
+/// Una línea de la tabla CANT. / DETALLE / V. UNITARIO / V. TOTAL.
+model InvoiceItem {
+  id          String @id @default(cuid())
+  invoiceId   String
+  quantity    Int    @default(1)
+  description String
+  unitPrice   Int
+  total       Int
+  sortOrder   Int    @default(0)
+
+  /// Qué producto del inventario es esta línea, cuando lo es.
+  ///
+  /// Nulo en casi todas: un tratamiento, un concepto suelto o algo escrito a
+  /// mano no salen de ningún estante. Solo se llena cuando la línea se eligió
+  /// del catálogo de productos, y es lo que permite descontar la venta del
+  /// inventario cuando la factura se cobra.
+  ///
+  /// Hace falta guardarlo aparte porque la descripción NO identifica nada: es
+  /// texto libre que se puede editar después de emitir, y dos productos se
+  /// pueden llamar igual. Buscar el producto por su nombre al momento de
+  /// descontar significaría descontar el equivocado, o ninguno, sin que nadie
+  /// se entere.
+  ///
+  /// `onDelete: SetNull` a propósito: si algún día se borra un producto, la
+  /// factura tiene que seguir existiendo con su descripción y su precio. Un
+  /// documento emitido no desaparece porque cambie el catálogo.
+  productId String?
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@map("invoice_items")
+}
+
+/// Cómo entró la plata. Lo que permite cuadrar el cajón: el efectivo se
+/// cuenta a mano, lo demás se contrasta con el extracto.
+enum PaymentMethod {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  OTRO
+}
+
+/// Un pago recibido contra una factura.
+///
+/// Existe porque el estado de la factura no dice CUÁNDO entró el dinero. Con
+/// solo `deposit` y `balance` encima del documento, un saldo que el paciente
+/// viene a pagar tres días después queda registrado como si hubiera entrado el
+/// día de la emisión, y el cierre de ese día nunca cuadra contra la caja real.
+///
+/// Aquí cada movimiento tiene su fecha propia, y de ahí sale el cierre.
+model Payment {
+  id        String @id @default(cuid())
+  invoiceId String
+
+  /// En pesos, sin decimales, igual que el resto de la facturación.
+  amount Int
+
+  method PaymentMethod @default(EFECTIVO)
+
+  /// Cuándo entró la plata. Puede no ser cuándo se registró: a veces se anota
+  /// al día siguiente, y el cierre tiene que contarla en el día que entró.
+  paidAt DateTime
+
+  /// Número de transacción, voucher o comprobante, cuando lo hay.
+  reference String?
+  notes     String?
+
+  /// Firma del paciente al entregar el dinero, en data URL (PNG).
+  ///
+  /// Se dibuja en el momento, delante de quien cobra. Es la prueba de que el
+  /// paciente reconoce lo que entregó: sin ella, «yo ya le aboné 50.000 a la
+  /// niña» contra «acá no aparece» no tiene cómo resolverse.
+  ///
+  /// Puede faltar: una transferencia que entra de noche se registra igual y
+  /// queda señalada como sin firma, porque dejar la caja descuadrada hasta que
+  /// el paciente venga a firmar es peor.
+  patientSignature String? @db.Text
+
+  /// Firma de quien recibió el dinero, en data URL (PNG).
+  ///
+  /// Sale de la firma guardada de quien está en sesión y se copia AQUÍ, no se
+  /// referencia: si esa persona cambia su firma guardada el año que viene, un
+  /// recibo ya firmado no puede cambiar solo.
+  receivedSignature String? @db.Text
+
+  /// Nombre bajo la firma de quien recibió.
+  ///
+  /// Se copia también, por lo mismo: `createdBy` dice quién lo registró en el
+  /// sistema, pero un nombre que se lee en el recibo no puede depender de que
+  /// esa cuenta siga existiendo ni de que no le cambien el nombre.
+  receivedBy String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@index([paidAt])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+/// El cierre de un día, ya cuadrado y firmado.
+///
+/// Guarda lo que decía el sistema Y lo que se contó en el cajón, con su
+/// diferencia. Es el punto del proceso donde alguien se hace responsable de
+/// que la caja cuadró: sin registro, «hicimos el cierre» es una afirmación que
+/// nadie puede comprobar después.
+///
+/// Los totales quedan CONGELADOS al cerrar. Si mañana alguien corrige un pago
+/// viejo, el cierre sigue diciendo lo que se contó ese día —que es justamente
+/// lo que lo hace útil para encontrar el descuadre.
+model CashClose {
+  id String @id @default(cuid())
+
+  /// El día cerrado, a medianoche en hora de la clínica. Único: un día se
+  /// cierra una sola vez.
+  closeDate DateTime @unique
+
+  /// Lo que el sistema esperaba, partido por naturaleza.
+  expectedCash  Int
+  expectedOther Int
+  expectedTotal Int
+
+  /// Lo que se contó en el cajón.
+  countedCash Int
+  /// `countedCash - expectedCash`. Se guarda calculado para no tener que
+  /// recomputarlo cada vez que se lista el histórico.
+  difference  Int
+
+  /// Cuántas facturas se emitieron ese día y por cuánto.
+  invoiceCount Int
+  invoicedTotal Int
+
+  notes String?
+
+  closedById String?
+  closedAt   DateTime @default(now())
+
+  closedBy User? @relation(fields: [closedById], references: [id])
+
+  @@index([closeDate])
+  @@map("cash_closes")
+}
+
+// ---------------------------------------------------------------------------
+// Ficha facial y estética
+// ---------------------------------------------------------------------------
+
+/// Fototipo de Fitzpatrick. Condiciona parámetros y riesgo de hiperpigmentación,
+/// así que se registra una vez y se arrastra a todas las sesiones.
+/// Los nombres llevan prefijo porque un identificador no puede empezar por
+/// número.
+enum SkinType {
+  FITZ_I
+  FITZ_II
+  FITZ_III
+  FITZ_IV
+  FITZ_V
+  FITZ_VI
+}
+
+/// La ficha de tratamientos faciales y estéticos.
+///
+/// Documento APARTE de `ClinicalRecord`, no una variante suya. La hoja capilar
+/// es una réplica medida del talonario de papel —con folículos, zonas del
+/// cuero cabelludo, shampoo y tipo de alopecia— y nada de eso significa algo en
+/// una sesión de botox. Meterlo todo en la misma hoja obligaba a llenarla de
+/// condicionales y a arriesgar el encaje en la página impresa, que costó medir.
+///
+/// Lo que une las dos es el paciente: su historial las muestra juntas y en
+/// orden.
+model FacialRecord {
+  id        String @id @default(cuid())
+  patientId String
+
+  /// Cuándo se abrió la ficha.
+  openedAt DateTime
+
+  /// Datos del paciente CONGELADOS al abrir, igual que en la ficha capilar:
+  /// un documento clínico tiene que seguir diciendo la edad que tenía ese día.
+  patientName     String
+  patientDocument String?
+  patientAge      Int?
+  patientPhone    String?
+
+  skinType SkinType?
+  /// Grasa, mixta, seca, sensible… texto libre porque no hay una lista cerrada
+  /// que todo el mundo use igual.
+  skinCondition String?
+
+  /// Qué viene a tratar: arrugas, manchas, acné, flacidez…
+  concerns String[]
+
+  allergies String?
+  /// Embarazo, lactancia, anticoagulantes, herpes activo, isotretinoína
+  /// reciente… lo que puede impedir un procedimiento.
+  contraindications String?
+
+  notes String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries   FacialEntry[]
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@index([openedAt])
+  @@map("facial_records")
+}
+
+/// Una sesión dentro de la ficha facial.
+model FacialEntry {
+  id       String @id @default(cuid())
+  recordId String
+
+  sessionDate  DateTime
+  /// «1.ª», «2.ª», «Retoque»… como lo llame el centro.
+  sessionLabel String?
+
+  /// Qué se hizo. Sale del catálogo de tratamientos.
+  serviceId String?
+
+  /// Zonas del rostro tratadas, por su identificador.
+  zones String[]
+
+  /// Qué producto se aplicó.
+  ///
+  /// `productId` enlaza con el inventario cuando el producto está cargado allí;
+  /// `productName` guarda el nombre tal cual, que es lo que sirve dentro de dos
+  /// años aunque el producto ya no exista en el catálogo.
+  productId   String?
+  productName String?
+  lotNumber   String?
+
+  /**
+   * Cuánto se aplicó.
+   *
+   * Es el único número decimal del proyecto, y va aquí a propósito: el dinero
+   * es entero porque el centavo no existe en esta facturación, pero 1,5 ml de
+   * bioestimulador sí existe y redondearlo sería falsear la historia clínica.
+   */
+  quantity     Float?
+  /// «U» para botox, «ml» para rellenos, «sesión» cuando no se mide.
+  quantityUnit String?
+
+  technique String?
+  findings  String?
+  homeCare  String?
+
+  /// Próxima cita, con la misma mecánica que la ficha capilar: si se llena, se
+  /// agenda sola, y al cambiarla la cita se MUEVE en vez de duplicarse.
+  nextControl              DateTime?
+  nextControlTime          String?
+  nextControlServiceId     String?
+  nextControlAppointmentId String?   @unique
+
+  professionalSignature String? @db.Text
+  patientSignature      String? @db.Text
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  record                 FacialRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  service                Service?     @relation("FacialEntryService", fields: [serviceId], references: [id])
+  nextControlService     Service?     @relation("FacialEntryNextControl", fields: [nextControlServiceId], references: [id])
+  nextControlAppointment Appointment? @relation(fields: [nextControlAppointmentId], references: [id])
+  product                Product?     @relation(fields: [productId], references: [id])
+
+  @@index([recordId])
+  @@map("facial_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Consentimientos informados
+// ---------------------------------------------------------------------------
+
+/// La plantilla en blanco: el PDF que el centro tiene redactado.
+///
+/// Se puede editar y desactivar. Lo que NO cambia nunca es lo que alguien ya
+/// firmó: cada firma guarda su propio PDF, cerrado. Ver `SignedConsent`.
+model ConsentTemplate {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  /// El consentimiento en sí, en texto plano. Párrafos separados por saltos de
+  /// línea; una línea en mayúsculas es un título y una que empieza por «-» es
+  /// una viñeta. El PDF se genera a partir de esto al firmar.
+  ///
+  /// Antes era la ruta a un PDF que subía el centro. Se cambió porque un PDF
+  /// ajeno puede venir cifrado, escaneado o con fuentes que la librería no sabe
+  /// leer, y el fallo aparecía al firmar, con el paciente delante.
+  body String @db.Text
+
+  /// Sube cada vez que se corrige el texto. Se copia sobre cada firma para
+  /// poder decir qué versión firmó cada paciente.
+  version Int @default(1)
+
+  active Boolean @default(true)
+
+  /**
+   * A qué procedimientos aplica.
+   *
+   * Varios a varios porque un mismo consentimiento suele cubrir más de un
+   * procedimiento —el de trasplante vale para barba, cejas y cuero cabelludo—
+   * y obligar a subir el mismo PDF tres veces garantiza que un día se corrija
+   * uno y se olviden los otros dos.
+   */
+  services Service[]
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy  User?           @relation(fields: [createdById], references: [id])
+  signatures SignedConsent[]
+
+  @@index([active, name])
+  @@map("consent_templates")
+}
+
+/// Un consentimiento ya firmado por un paciente.
+///
+/// Es un documento CERRADO. Guarda su propio PDF —la plantilla con la hoja de
+/// firma pegada— y no una referencia a la plantilla viva: si mañana el centro
+/// corrige el texto del consentimiento, lo que este paciente firmó tiene que
+/// seguir diciendo exactamente lo que decía el día que puso su firma. Un
+/// consentimiento que cambia solo no consiente nada.
+///
+/// Por lo mismo, los datos del paciente y el nombre de la plantilla se copian
+/// aquí en vez de leerse por la relación.
+model SignedConsent {
+  id         String  @id @default(cuid())
+  templateId String?
+  patientId  String
+
+  /// Copiados al firmar, y congelados.
+  templateName    String
+  templateVersion Int    @default(1)
+  patientName     String
+  patientDocument String?
+
+  signedAt DateTime
+
+  /// El PDF firmado. Este archivo no se reemplaza nunca.
+  fileUrl String
+
+  /// La firma tal cual se capturó, además de estar dentro del PDF. Sirve para
+  /// auditar sin tener que abrir y diseccionar el documento.
+  signature String @db.Text
+
+  /// Quién del centro acompañó la firma.
+  professionalName String?
+  signedById       String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  /// La plantilla se pone en null si se borra: el documento firmado sobrevive.
+  template ConsentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  patient  Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  signedBy User?            @relation(fields: [signedById], references: [id])
+
+  @@index([patientId, signedAt])
+  @@map("signed_consents")
+}
+
+// ---------------------------------------------------------------------------
+// Inventario
+// ---------------------------------------------------------------------------
+
+/// Un medicamento se rige por lote y vencimiento; un insumo, no. La distinción
+/// cambia qué se le pide a quien registra una entrada.
+enum ProductKind {
+  MEDICAMENTO
+  INSUMO
+}
+
+/// Medicamento o insumo del catálogo.
+///
+/// NO guarda la existencia. El stock se calcula sumando los movimientos, y es
+/// deliberado: un contador guardado encima del producto se desincroniza el día
+/// que alguien escribe un movimiento sin pasar por el servicio, y a partir de
+/// ahí el inventario miente sin que nadie lo note. Sumar es una consulta más;
+/// a esta escala no se siente y a cambio el número no puede estar mal.
+model Product {
+  id   String      @id @default(cuid())
+  name String
+  kind ProductKind @default(INSUMO)
+
+  /// Código interno o de barras, si lo usan. No es obligatorio.
+  sku String? @unique
+
+  /// Cómo se cuenta: unidad, ampolla, caja, ml, gramo…
+  unit String @default("unidad")
+
+  /// Presentación o concentración: «Vial 5 ml», «60 mg/ml».
+  presentation String?
+
+  /// Cómo lo agrupa el centro: CAPILAR, ANTIFUNGICO, SUPLEMENTO, PROTECTOR
+  /// SOLAR… No es un enum porque la lista la deciden ellas y crece: encerrarla
+  /// en el código obligaría a un despliegue cada vez que aparezca una familia
+  /// nueva de productos.
+  category String?
+
+  /// Lo que se le cobra al paciente, en pesos enteros.
+  ///
+  /// El costo de compra NO va aquí: vive en cada entrada de stock, porque
+  /// cambia con cada compra y guardar solo el último borraría el historial. El
+  /// de venta sí es del producto: es uno solo hasta que lo cambien.
+  salePrice Int?
+
+  /// Dónde se compra. Sirve para armar el pedido sin abrir el Excel.
+  supplier String?
+
+  /// Debajo de esta cantidad el panel lo marca como bajo. 0 = sin aviso.
+  minStock Int @default(0)
+
+  notes String?
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  moves StockMove[]
+  facialEntries FacialEntry[]
+  invoiceItems  InvoiceItem[]
+
+  @@index([active, name])
+  @@map("products")
+}
+
+/// Qué clase de movimiento es. El signo lo pone el servicio, no quien registra:
+/// una salida siempre resta, pase lo que pase.
+enum StockMoveType {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+/// Por qué se movió. Sirve para explicar una merma sin tener que leer notas.
+enum StockMoveReason {
+  COMPRA
+  USO_EN_PACIENTE
+  /// Se le vendió al paciente y quedó facturado. Lo pone el sistema solo
+  /// cuando la factura se cobra; no se elige a mano al registrar un movimiento,
+  /// porque una venta sin su factura detrás es justo lo que no se quiere.
+  VENTA
+  DEVOLUCION
+  VENCIMIENTO
+  DANO
+  CONTEO
+  /// Deshace un movimiento mal anotado. Lo pone el sistema al corregir: nunca
+  /// se elige a mano, porque siempre apunta al movimiento que corrige.
+  CORRECCION
+  OTRO
+}
+
+/// Cada entrada, salida o ajuste del inventario.
+///
+/// Es la única fuente de la existencia: no hay forma de cambiar el stock que no
+/// sea dejando aquí constancia de quién lo movió, cuándo y por qué.
+model StockMove {
+  id        String @id @default(cuid())
+  productId String
+
+  type   StockMoveType
+  reason StockMoveReason @default(OTRO)
+
+  /// SIEMPRE positiva. El sentido lo da `type`: guardar cantidades negativas
+  /// invita a que una suma mal escrita convierta una salida en entrada.
+  quantity Int
+
+  /// Cuándo ocurrió de verdad, que no siempre es cuándo se anotó.
+  occurredAt DateTime
+
+  /// A quién se le aplicó. Solo en las salidas por uso en paciente; es lo que
+  /// permite responder «qué se le puso a este paciente».
+  patientId String?
+
+  /// Qué movimiento corrige, cuando este es una corrección.
+  ///
+  /// Un movimiento no se borra nunca: si se anotó mal, se registra otro en
+  /// sentido contrario y la existencia vuelve sola a su sitio, porque se
+  /// calcula sumando. Este campo es lo que une los dos, y lo que permite
+  /// mostrar el original tachado en vez de dos filas sueltas que se contradicen
+  /// sin explicación.
+  ///
+  /// También evita corregir dos veces lo mismo, que restaría el doble.
+  correctsId String? @unique
+
+  /// De qué factura salió, cuando la salida es una venta.
+  ///
+  /// No es decorativo: es lo que hace que descontar sea reversible y no se
+  /// pueda descontar dos veces. Antes de crear la salida se mira si esta
+  /// factura ya tiene la suya, y al anularla o al deshacer su cobro se buscan
+  /// por aquí para quitarlas. Sin este vínculo, cobrar dos veces la misma
+  /// factura descontaría el doble y nadie tendría cómo saber cuál sobra.
+  invoiceId String?
+
+  /// Lote y vencimiento de lo que ENTRÓ.
+  ///
+  /// Se anotan sobre la entrada, no sobre cada unidad: no hay trazabilidad por
+  /// lote —el sistema no sabe de qué lote salió lo que se usó—, pero sí basta
+  /// para avisar de lo que está por vencer y salir a mirar el estante.
+  lotNumber String?
+  expiresAt DateTime?
+
+  /// Costo unitario de la compra, en pesos enteros. Solo en entradas.
+  unitCost Int?
+
+  notes String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  patient   Patient? @relation(fields: [patientId], references: [id])
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  /// Si se borrara la factura, su salida de stock se va con ella: dejar
+  /// colgada una salida que ya no puede explicarse es peor que no tenerla.
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  /// El movimiento que este corrige, y el que lo corrige a él.
+  corrects  StockMove?  @relation("Correccion", fields: [correctsId], references: [id], onDelete: Restrict)
+  correction StockMove? @relation("Correccion")
+
+  @@index([productId, occurredAt])
+  @@index([patientId])
+  @@index([occurredAt])
+  @@index([invoiceId])
+  @@map("stock_moves")
+}
+
+// ---------------------------------------------------------------------------
+// Control evolutivo (ficha clínica capilar)
+// ---------------------------------------------------------------------------
+
+/// Qué se le está haciendo al paciente. En el papel son dos casillas.
+enum CareType {
+  TERAPIAS_CAPILARES
+  TRASPLANTE
+}
+
+/// La hoja de "Datos del paciente" + "Control evolutivo por sesiones".
+///
+/// Es una ficha INDEPENDIENTE de los planes y sesiones que ya existen: se
+/// decidió así para no tocar el portal de seguimiento del paciente, que hoy
+/// funciona. El costo consciente es que una visita puede quedar registrada en
+/// los dos lados; si eso estorba en la práctica, el paso siguiente sería
+/// enlazar cada fila con su TreatmentSession.
+model ClinicalRecord {
+  id        String @id @default(cuid())
+  patientId String
+
+  /// Fecha del procedimiento, la de la esquina superior derecha del papel.
+  procedureDate DateTime
+
+  /// Datos del paciente CONGELADOS al abrir la ficha.
+  ///
+  /// La ficha es un documento clínico: tiene que seguir diciendo la edad que
+  /// el paciente tenía ese día y el teléfono con el que se le contactó, aunque
+  /// mañana los dos cambien.
+  patientName     String
+  patientDocument String?
+  patientAge      Int?
+  patientPhone    String?
+
+  careType      CareType @default(TERAPIAS_CAPILARES)
+  totalSessions Int?
+
+  /// Casillas de trasplante.
+  transplantBeard    Boolean @default(false)
+  transplantEyebrows Boolean @default(false)
+  transplantScalp    Boolean @default(false)
+  /// Zonas capilares marcadas en el papel: 1, 2, 3, 4.
+  transplantZones    Int[]
+
+  follicles     Int?
+  folliclesLost Int?
+  warranty      String?
+
+  /// Zonas marcadas en los diagramas de cabeza, por su identificador.
+  markedZones String[]
+
+  notes       String?
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries   ClinicalEntry[]
+  patient   Patient @relation(fields: [patientId], references: [id])
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@index([procedureDate])
+  @@map("clinical_records")
+}
+
+/// Una fila de la tabla "Control evolutivo por sesiones".
+model ClinicalEntry {
+  id       String @id @default(cuid())
+  recordId String
+
+  sessionDate DateTime
+  /// La columna "Control" del papel: 1H, 2H, 3H…
+  controlLabel String?
+
+  alopeciaType       String?
+  treatment          String?
+  treatedZone        String?
+  oralMedication     String?
+  topicalMedication  String?
+  shampoo            String?
+  findings           String?
+
+  /// Fecha del próximo control, como en el papel.
+  nextControl        DateTime?
+  /// Hora del próximo control, "HH:mm". Sin ella no se puede agendar: una
+  /// cita del sistema ocupa un rango, no un día.
+  nextControlTime    String?
+  /// Tratamiento de esa próxima cita. Define cuánto dura el bloque.
+  nextControlServiceId String?
+  /// Cita ya creada para este próximo control.
+  ///
+  /// Se guarda para poder MOVERLA cuando se edita la ficha, en vez de crear
+  /// una segunda. Sin esto, cada vez que alguien reabre y guarda la ficha
+  /// aparecería una cita repetida en la agenda.
+  nextControlAppointmentId String? @unique
+
+  /// Firmas en data URL (PNG), capturadas en pantalla.
+  professionalSignature String? @db.Text
+  patientSignature      String? @db.Text
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  record ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  nextControlService Service? @relation(fields: [nextControlServiceId], references: [id])
+  nextControlAppointment Appointment? @relation(fields: [nextControlAppointmentId], references: [id])
+
+  @@index([recordId])
+  @@map("clinical_entries")
+}
